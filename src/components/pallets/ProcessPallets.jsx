@@ -103,11 +103,6 @@ export default function ProcessPallets() {
     // Update state with data from "API"
     setCurrentPallet(updatedPallet);
     setMessage(`✓ ${newAsns.length} additional ASN(s) saved.`);
-
-    // Focus back to input after saving
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
   };
 
   const processPallet = async (id) => {
@@ -508,6 +503,7 @@ export default function ProcessPallets() {
         palletId={currentPallet ? currentPallet.id : null}
         existingAsn={currentPallet ? currentPallet.asns[0] : 0}
         onSave={handleSaveAsns}
+        onExited={() => inputRef.current?.focus()}
       />
     </Box>
   );

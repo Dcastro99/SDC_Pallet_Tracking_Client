@@ -13,7 +13,14 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
+const AdditionalASN = ({
+  isOpen,
+  onClose,
+  palletId,
+  existingAsn,
+  onSave,
+  onExited,
+}) => {
   const [additionalAsns, setAdditionalAsns] = useState([]);
   const [scanInput, setScanInput] = useState("");
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -138,6 +145,7 @@ const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
       onClose={onClose}
       // maxWidth="md"
       fullWidth
+      disableRestoreFocus
       slotProps={{
         paper: {
           bgcolor: "#4a4a4a",
@@ -148,6 +156,9 @@ const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
         transition: {
           onEntered: () => {
             inputRef.current?.focus();
+          },
+          onExited: () => {
+            onExited?.();
           },
         },
       }}
