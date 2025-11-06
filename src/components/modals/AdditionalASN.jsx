@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,31 @@ const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
+  const inputRef = useRef(null);
+
+  // Clear additionalAsns array when palletId becomes null (Cancel is clicked)
+  useEffect(() => {
+    if (palletId === null) {
+      setAdditionalAsns([]);
+      setScanInput("");
+    }
+  }, [palletId]);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      // Small delay to ensure dialog animation completes
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (onClose) {
+      setScanInput("");
+    }
+  }, [onClose]);
 
   const handleAddAsn = () => {
     if (scanInput.trim()) {
@@ -87,20 +112,16 @@ const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
     // Prepare data to send to database
     const dataToSend = {
       id: palletId,
-      asns: [
-        existingAsn,
-        ...additionalAsns.map((asn) => ({
-          asn: asn.asn,
-          sequence_order: asn.sequence_order,
-          // These fields might come from the existing ASN or be separate inputs
-          item_id: existingAsn.item_id,
-          po_no: existingAsn.po_no,
-          quantity: existingAsn.quantity,
-          company_no: existingAsn.company_no,
-          destination: existingAsn.destination,
-        })),
-      ],
-      status_id: 1,
+      additionalAsns: additionalAsns.map((asn) => ({
+        asn: asn.asn,
+        // sequence_order: asn.sequence_order,
+        // // These fields might come from the existing ASN or be separate inputs
+        // item_id: existingAsn.item_id,
+        // po_no: existingAsn.po_no,
+        // quantity: existingAsn.quantity,
+        // company_no: existingAsn.company_no,
+        // destination: existingAsn.destination,
+      })),
     };
 
     // Call the save handler passed from parent
@@ -123,6 +144,11 @@ const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
           color: "white",
           borderradius: 3,
           // maxWidth: 400,
+        },
+        transition: {
+          onEntered: () => {
+            inputRef.current?.focus();
+          },
         },
       }}
     >
@@ -265,6 +291,7 @@ const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
             onKeyDown={(e) => e.key === "Enter" && handleAddAsn()}
             placeholder="scan ASN..."
             variant="outlined"
+            inputRef={inputRef}
             sx={{
               "& .MuiOutlinedInput-root": {
                 bgcolor: "#5a5a5a",

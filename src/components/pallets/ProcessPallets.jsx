@@ -103,6 +103,11 @@ export default function ProcessPallets() {
     // Update state with data from "API"
     setCurrentPallet(updatedPallet);
     setMessage(`✓ ${newAsns.length} additional ASN(s) saved.`);
+
+    // Focus back to input after saving
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
   const processPallet = async (id) => {
@@ -246,9 +251,14 @@ export default function ProcessPallets() {
   };
 
   const handleReset = () => {
+    console.log("RESET CALLED - Before:", currentPallet);
+    if (currentPallet?.id) {
+      delete MOCK_DB.current[currentPallet.id];
+    }
     setCurrentPallet(null);
     setScanInput("");
     setMessage("Scan ASN...");
+    console.log("RESET CALLED - After setting to null");
   };
 
   // Keep input focused for continuous scanning
@@ -259,21 +269,26 @@ export default function ProcessPallets() {
   useEffect(() => {
     if (message.startsWith("✓")) {
       const timer = setTimeout(() => {
-        setMessage("Scan ASN...");
-      }, 5000);
+        if (!currentPallet) {
+          setMessage("Scan ASN ...");
+        } else if (currentPallet && currentPallet.status_id === 1) {
+          // Check if input is actually focused before setting the message
+          if (document.activeElement === inputRef.current) {
+            handleFocus();
+          } else {
+            setMessage("Select Input to scan");
+          }
+        }
+      }, 3000);
 
       return () => clearTimeout(timer);
     }
   }, [message]);
-
-  // Cleanup timeout on unmount
-  //   useEffect(() => {
-  //     return () => {
-  //       if (timeoutRef.current) {
-  //         clearTimeout(timeoutRef.current);
-  //       }
-  //     };
-  //   }, []);
+  useEffect(() => {
+    if (currentPallet) {
+      console.log("Current pallet updated:", currentPallet);
+    }
+  }, [currentPallet]);
 
   return (
     <Box
@@ -339,6 +354,7 @@ export default function ProcessPallets() {
             sx={{
               p: 2,
               width: "98%",
+              maxHeight: 300,
               mb: 2,
               mt: 1,
               display: "flex",
@@ -348,16 +364,10 @@ export default function ProcessPallets() {
 
               borderRadius: 2,
               border: "2px solid #3dcf44ff",
+              overflowY: "auto",
               //   maxWidth: "500px",
             }}
           >
-            <Typography
-              variant="h6"
-              gutterBottom
-              sx={{ color: theme.palette.text.message }}
-            >
-              ASN: {currentPallet.asns[0].asn}
-            </Typography>
             {currentPallet.asns.map((asn) => (
               <Box
                 key={asn.asn}
@@ -369,6 +379,14 @@ export default function ProcessPallets() {
                   "&:last-child": { borderBottom: "none" },
                 }}
               >
+                <Typography
+                  variant="h6"
+                  textAlign="center"
+                  gutterBottom
+                  sx={{ color: theme.palette.text.message }}
+                >
+                  ASN: {asn.asn}
+                </Typography>
                 <Typography
                   sx={{ color: theme.palette.text.message }}
                   variant="body1"
@@ -387,14 +405,14 @@ export default function ProcessPallets() {
                 >
                   Qty: {asn.quantity}
                 </Typography>
-                <Typography
-                  sx={{ color: theme.palette.text.message }}
-                  variant="body1"
-                >
-                  ASN's on pallet: {currentPallet.asns.length}
-                </Typography>
               </Box>
             ))}
+            <Typography
+              sx={{ color: theme.palette.text.message }}
+              variant="body1"
+            >
+              ASN's on pallet: {currentPallet.asns.length}
+            </Typography>
           </Box>
         )}
 
@@ -409,7 +427,7 @@ export default function ProcessPallets() {
           onFocus={handleFocus}
           onBlur={handleBlur}
           sx={{
-            mt: 2,
+            // mt: 1,
             width: "95%",
             backgroundColor: theme.palette.input.main,
             borderRadius: 3.5,
@@ -432,27 +450,26 @@ export default function ProcessPallets() {
           }}
         />
         {currentPallet && (
-          <Box>
-            <Button
-              sx={{
-                color: theme.palette.background.paper,
-                bgcolor: "#6e49f5f1",
-                "&:focus": {
-                  outline: "none",
-                },
-              }}
-              variant="contained"
-              onClick={() => setAdditionalASNOpen(true)}
-            >
-              Additional ASN's
-            </Button>
-          </Box>
+          <Button
+            sx={{
+              mt: 1,
+              color: theme.palette.background.paper,
+              bgcolor: "#6e49f5f1",
+              "&:focus": {
+                outline: "none",
+              },
+            }}
+            variant="contained"
+            onClick={() => setAdditionalASNOpen(true)}
+          >
+            Additional ASN's
+          </Button>
         )}
 
         <Typography
           variant="h6"
           sx={{
-            mb: 2,
+            mb: 1,
             textAlign: "center",
             color: message.startsWith("✓")
               ? "#4caf50"
@@ -472,7 +489,8 @@ export default function ProcessPallets() {
             // color={theme.palette.secondary.main}
             onClick={handleReset}
             sx={{
-              my: 1,
+              // my: 1,
+              mb: 1,
               color: theme.palette.secondary.main,
               "&:focus": {
                 outline: "none",
