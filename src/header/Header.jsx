@@ -56,7 +56,13 @@ const Header = ({ onNavigate, currentView }) => {
             color="inherit"
             aria-label="menu"
             onClick={toggleDrawer(true)}
-            sx={{ mr: 2 }}
+            sx={{
+              mr: 2,
+              "&:focus": {
+                outline: "none",
+                backgroundColor: "transparent",
+              },
+            }}
           >
             <MenuIcon />
           </IconButton>

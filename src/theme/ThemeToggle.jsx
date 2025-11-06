@@ -9,7 +9,16 @@ export const ThemeToggle = () => {
   const { toggleColorMode, mode } = useContext(ColorModeContext);
 
   return (
-    <IconButton onClick={toggleColorMode} color="inherit">
+    <IconButton
+      sx={{
+        "&:focus": {
+          outline: "none",
+          backgroundColor: "transparent",
+        },
+      }}
+      onClick={toggleColorMode}
+      color="inherit"
+    >
       {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
     </IconButton>
   );

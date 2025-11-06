@@ -12,22 +12,26 @@ export const getTheme = (mode) =>
         ? {
             // Light mode colors (you can customize these later)
             primary: {
-              main: "#3d8ddd75",
+              main: "#5727b175",
             },
             selected: {
               main: "#6e49f5f1",
             },
             secondary: {
-              main: "#dc004e",
+              main: "#ee3838ff",
             },
             input: {
               main: "#8f8d96ff",
+              background: "#4a4a4a",
             },
             text: {
               primary: "#dbdadaff",
               secondary: "#cacccfff",
               message: "#595c61ff",
               lb: "#0e0d0dff",
+            },
+            button: {
+              backgroundColor: "#37393fff",
             },
             background: {
               // default: "#e0e0e0ff",
@@ -45,8 +49,14 @@ export const getTheme = (mode) =>
               main: "#0f172a", // Button background
               contrastText: "#e2e2e2", // Button text
             },
+            secondary: {
+              main: "#ee3838ff",
+            },
             selected: {
               main: "#6e49f5f1",
+            },
+            button: {
+              backgroundColor: "#c6c6caff",
             },
             background: {
               default: "#020617", // Main background
@@ -55,6 +65,7 @@ export const getTheme = (mode) =>
             },
             input: {
               main: "#53586dff",
+              background: "#4a4a4a",
             },
             //
             text: {

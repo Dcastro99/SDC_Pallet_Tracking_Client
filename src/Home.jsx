@@ -10,7 +10,7 @@ export default function Home() {
   const [view, setView] = useState("home");
   const buttonSize = 140;
   const theme = useTheme();
-  console.log("Current theme:", theme.palette.border.main);
+  // console.log("Current theme:", theme.palette.border.main);
 
   return (
     <Box
@@ -33,8 +33,8 @@ export default function Home() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          pt: 4,
-          pb: 2,
+          pt: 1,
+          pb: 1,
           overflow: "auto",
         }}
       >

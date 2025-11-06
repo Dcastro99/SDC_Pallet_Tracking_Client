@@ -1,0 +1,338 @@
+import React, { useState, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogActions,
+  Typography,
+  TextField,
+  Button,
+  Box,
+  IconButton,
+  Paper,
+  Stack,
+} from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
+
+const AdditionalASN = ({ isOpen, onClose, palletId, existingAsn, onSave }) => {
+  const [additionalAsns, setAdditionalAsns] = useState([]);
+  const [scanInput, setScanInput] = useState("");
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isDragging = useRef(false);
+
+  const handleAddAsn = () => {
+    if (scanInput.trim()) {
+      const newAsn = {
+        asn: scanInput.trim(),
+        sequence_order: additionalAsns.length + 2, // +2 because first ASN is sequence 1
+        tempId: Date.now(), // Temporary ID for tracking
+      };
+      setAdditionalAsns([...additionalAsns, newAsn]);
+      setScanInput("");
+    }
+  };
+
+  const handleDelete = (index) => {
+    const updated = additionalAsns.filter((_, i) => i !== index);
+    // Reorder sequence numbers
+    const reordered = updated.map((asn, i) => ({
+      ...asn,
+      sequence_order: i + 2,
+    }));
+    setAdditionalAsns(reordered);
+  };
+
+  const handleTouchStart = (e, index) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isDragging.current = false;
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e, index) => {
+    if (draggedIndex !== index) return;
+
+    const touchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+    const deltaX = touchX - touchStartX.current;
+    const deltaY = touchY - touchStartY.current;
+
+    // Only start dragging if horizontal movement is dominant
+    if (
+      !isDragging.current &&
+      Math.abs(deltaX) > Math.abs(deltaY) &&
+      Math.abs(deltaX) > 10
+    ) {
+      isDragging.current = true;
+    }
+
+    if (isDragging.current && deltaX < 0) {
+      setDragOffset(Math.max(deltaX, -100));
+      e.preventDefault();
+    }
+  };
+
+  const handleTouchEnd = (index) => {
+    if (dragOffset < -60) {
+      handleDelete(index);
+    }
+    setDragOffset(0);
+    setDraggedIndex(null);
+    isDragging.current = false;
+  };
+
+  const handleDone = async () => {
+    // Prepare data to send to database
+    const dataToSend = {
+      id: palletId,
+      asns: [
+        existingAsn,
+        ...additionalAsns.map((asn) => ({
+          asn: asn.asn,
+          sequence_order: asn.sequence_order,
+          // These fields might come from the existing ASN or be separate inputs
+          item_id: existingAsn.item_id,
+          po_no: existingAsn.po_no,
+          quantity: existingAsn.quantity,
+          company_no: existingAsn.company_no,
+          destination: existingAsn.destination,
+        })),
+      ],
+      status_id: 1,
+    };
+
+    // Call the save handler passed from parent
+    if (onSave) {
+      await onSave(dataToSend);
+    }
+
+    onClose();
+  };
+
+  return (
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      // maxWidth="md"
+      fullWidth
+      slotProps={{
+        paper: {
+          bgcolor: "#4a4a4a",
+          color: "white",
+          borderradius: 3,
+          // maxWidth: 400,
+        },
+      }}
+    >
+      <DialogContent sx={{ px: 3, py: 4 }}>
+        <Typography
+          variant="h5"
+          align="center"
+          sx={{ mb: 3, fontWeight: 500, color: "gray" }}
+        >
+          Add ASN
+        </Typography>
+
+        {/* Display existing ASN */}
+        <Paper
+          elevation={0}
+          sx={{
+            bgcolor: "#3a3a3a",
+            border: "1px solid #5a5a5a",
+            borderRadius: 1,
+            p: 2,
+            mb: 2,
+          }}
+        >
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Typography sx={{ color: "#999" }}>1</Typography>
+            <Typography sx={{ color: "#999" }}>ASN:</Typography>
+            <Typography
+              sx={{ fontWeight: 500, fontSize: "1.125rem", color: "white" }}
+            >
+              {existingAsn.asn}
+            </Typography>
+          </Stack>
+        </Paper>
+
+        {/* Display additional ASNs with swipe to delete */}
+        <Box
+          sx={{
+            maxHeight: 250,
+            overflowY: "auto",
+            mb: 2,
+            "&::-webkit-scrollbar": {
+              width: "6px",
+            },
+            "&::-webkit-scrollbar-track": {
+              bgcolor: "#2a2a2a",
+              borderRadius: "3px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              bgcolor: "#5a5a5a",
+              borderRadius: "3px",
+            },
+          }}
+        >
+          {additionalAsns.map((asn, index) => (
+            <Box
+              key={asn.tempId}
+              sx={{
+                position: "relative",
+                mb: 1.5,
+                overflow: "hidden",
+              }}
+            >
+              <Paper
+                elevation={0}
+                sx={{
+                  bgcolor: "#2a2a2a",
+                  borderRadius: 1,
+                  p: 2,
+                  position: "relative",
+                  zIndex: 2,
+                  transform:
+                    draggedIndex === index
+                      ? `translateX(${dragOffset}px)`
+                      : "translateX(0)",
+                  transition:
+                    draggedIndex === index && dragOffset !== 0
+                      ? "none"
+                      : "transform 0.3s ease",
+                  touchAction: "pan-y",
+                }}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={(e) => handleTouchMove(e, index)}
+                onTouchEnd={() => handleTouchEnd(index)}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Typography sx={{ color: "#999" }}>
+                    {asn.sequence_order}
+                  </Typography>
+                  <Typography sx={{ color: "#999" }}>ASN:</Typography>
+                  <Typography
+                    sx={{ fontWeight: 500, fontSize: "1.125rem", flex: 1 }}
+                  >
+                    {asn.asn}
+                  </Typography>
+                </Stack>
+              </Paper>
+
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 100,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  pr: 2.5,
+                  zIndex: 1,
+                }}
+              >
+                <IconButton
+                  onClick={() => handleDelete(index)}
+                  sx={{
+                    bgcolor: "#ff4757",
+                    color: "white",
+                    width: 50,
+                    height: 50,
+                    "&:hover": {
+                      bgcolor: "#ff3838",
+                    },
+                    "&:active": {
+                      bgcolor: "#ee2f3f",
+                    },
+                  }}
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+
+        {/* Scan input */}
+        <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+          <TextField
+            fullWidth
+            value={scanInput}
+            onChange={(e) => setScanInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAddAsn()}
+            placeholder="scan ASN..."
+            variant="outlined"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "#5a5a5a",
+                color: "white",
+                borderRadius: 1,
+                "& fieldset": {
+                  border: "none",
+                },
+                "& input::placeholder": {
+                  color: "#999",
+                  opacity: 1,
+                },
+              },
+            }}
+          />
+        </Stack>
+
+        <Typography
+          align="center"
+          sx={{ color: "#999", fontSize: "0.875rem", mb: 3 }}
+        >
+          Scan all ASN's on pallet
+        </Typography>
+      </DialogContent>
+
+      {/* Action buttons */}
+      <DialogActions
+        sx={{ flexDirection: "column", gap: 1.5, px: 3, pb: 3, pt: 0 }}
+      >
+        <Button
+          onClick={handleDone}
+          fullWidth
+          variant="contained"
+          sx={{
+            bgcolor: "#6e49f5f1",
+            py: 1.5,
+            fontSize: "1rem",
+            textTransform: "none",
+            "&:hover": {
+              bgcolor: "#4b23dbf1",
+            },
+            "&:active": {
+              bgcolor: "#6e49f5f1",
+            },
+          }}
+        >
+          Done
+        </Button>
+        <Button
+          onClick={onClose}
+          fullWidth
+          sx={{
+            color: "#999",
+            textTransform: "none",
+            "&:hover": {
+              color: "#ccc",
+              bgcolor: "transparent",
+            },
+            "&:active": {
+              color: "white",
+            },
+          }}
+        >
+          Cancel
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default AdditionalASN;

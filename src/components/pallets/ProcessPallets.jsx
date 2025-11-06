@@ -1,16 +1,60 @@
 import { useState, useEffect, useRef } from "react";
 import { Container, Typography, TextField, Button, Box } from "@mui/material";
-import PalletIcon from "../../assets/palletIcon.png";
 import { useTheme } from "@mui/material/styles";
+import AdditionalASN from "../modals/AdditionalASN";
 
 export default function ProcessPallets() {
   const theme = useTheme();
   const [scanInput, setScanInput] = useState("");
   const [currentPallet, setCurrentPallet] = useState(null);
   const [message, setMessage] = useState("Scan ASN ...");
+  const [additionalASNOpen, setAdditionalASNOpen] = useState(false);
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
-  console.log("color", theme.palette.text.label);
+
+  // Mock database - simulates pallets stored in the backend
+  const MOCK_DB = useRef({
+    1000017: {
+      id: 1000017,
+      asns: [
+        {
+          asn: "ASN-001",
+          sequence_order: 1,
+          item_id: "CBO P17 ATX 4 14 6",
+          po_no: 803601,
+          quantity: 192,
+          company_no: "SLK1",
+          destination: "Elk Grove",
+        },
+      ],
+      status_id: 1,
+    },
+    1000018: {
+      id: 1000018,
+      asns: [
+        {
+          asn: "ASN-100",
+          sequence_order: 1,
+          item_id: "XYZ P20 BTX 5 16 8",
+          po_no: 803602,
+          quantity: 144,
+          company_no: "SLK1",
+          destination: "Sacramento",
+        },
+        {
+          asn: "ASN-101",
+          sequence_order: 2,
+          item_id: "ABC P15 CTX 3 12 4",
+          po_no: 803603,
+          quantity: 96,
+          company_no: "SLK2",
+          destination: "Elk Grove",
+        },
+      ],
+      status_id: 1,
+    },
+  });
+
   // Define your barcode prefixes/patterns
   const BARCODE_PATTERNS = {
     STAGE: /^STAGE-/i, // e.g., "STAGE-A1", "STAGE-B2"
@@ -20,59 +64,106 @@ export default function ProcessPallets() {
     // BAY: (code) => code >= 6000 && code < 7000,
   };
 
+  const handleSaveAsns = async (data) => {
+    console.log("Saving additional ASNs:", data);
+    setMessage("Saving additional ASNs...");
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // TODO: Replace with actual API call
+    // const response = await fetch('/api/save-additional-asns', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({
+    //     palletId: currentPallet.id,
+    //     additionalAsns: data.additionalAsns
+    //   })
+    // });
+    // const updatedPallet = await response.json();
+
+    // Simulate updating the "database" with new ASNs
+    const existingPallet = MOCK_DB.current[currentPallet.id];
+    const newAsns = data.additionalAsns.map((asn, index) => ({
+      ...asn,
+      sequence_order: existingPallet.asns.length + index + 1,
+    }));
+
+    // Update mock database
+    MOCK_DB.current[currentPallet.id] = {
+      ...existingPallet,
+      asns: [...existingPallet.asns, ...newAsns],
+    };
+
+    // Simulate API response returning the updated pallet
+    const updatedPallet = MOCK_DB.current[currentPallet.id];
+
+    console.log("Updated pallet from API:", updatedPallet);
+
+    // Update state with data from "API"
+    setCurrentPallet(updatedPallet);
+    setMessage(`✓ ${newAsns.length} additional ASN(s) saved.`);
+  };
+
   const processPallet = async (id) => {
     console.log(`Fetching Pallet ID: ${id}`);
     setMessage("Loading pallet information...");
 
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     // TODO: Replace with actual API call
     // const response = await fetch('/api/process-pallet', {
     //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
     //   body: JSON.stringify({ palletId: id })
     // });
     // const data = await response.json();
 
-    // Simulate API response
-    const data = {
-      id: 1000017,
-      asns: [
-        {
-          asn: "1105208",
-          sequence_order: 1,
-          item_id: "CBO P17 ATX 4 14 6",
-          po_no: 803601,
-          quantity: 192,
-          company_no: "SLK1",
-          destination: "Elk Grove",
-        },
-        // {
-        //   asn: "1105290",
-        //   sequence_order: 2,
-        //   item_id: "GPF HP8 14 25 1",
-        //   po_no: 803589,
-        //   quantity: 360,
-        //   company_no: "SLK1",
-        //   destination: "Elk Grove",
-        // },
-        // {
-        //   asn: "1105290",
-        //   sequence_order: 2,
-        //   item_id: "CEL 4 26 90",
-        //   po_no: 803545,
-        //   quantity: 120,
-        //   company_no: "SLK1",
-        //   destination: "Elk Grove",
-        // },
-      ],
-      status_id: 1,
-    };
+    // Simulate API response from mock database
+    let data = MOCK_DB.current[id];
 
+    // If pallet not found in database, create a new one
+    if (!data) {
+      data = {
+        id: parseInt(id) || id,
+        asns: [
+          {
+            asn: scanInput || `ASN-${id}`,
+            sequence_order: 1,
+            item_id: "CBO P17 ATX 4 14 6",
+            po_no: 803601,
+            quantity: 192,
+            company_no: "SLK1",
+            destination: "Elk Grove",
+          },
+        ],
+        status_id: 1,
+      };
+      // Store in mock database
+      MOCK_DB.current[id] = data;
+    }
+
+    console.log("Pallet data from API:", data);
     setCurrentPallet(data);
 
     if (data.status_id === 1) {
-      setMessage("Pallet ready! Scan STAGE barcode or BAY DOOR barcode");
+      setMessage("Scan new location");
     } else {
       setMessage(`Pallet status: ${data.status_id}. Scan next pallet.`);
     }
+  };
+  const handleFocus = () => {
+    if (!currentPallet) {
+      setMessage("Scan ASN...");
+    }
+    if (currentPallet && currentPallet.status_id === 1) {
+      setMessage("Scan new location");
+    }
+  };
+
+  const handleBlur = () => {
+    setMessage("Select Input to scan");
   };
 
   const handleStage = async (stageCode) => {
@@ -85,10 +176,12 @@ export default function ProcessPallets() {
     //   body: JSON.stringify({ palletId: currentPallet.id, stageLocation: stageCode })
     // });
 
+    // setTimeout(() => {
     setMessage(
       `✓ Pallet ${currentPallet.id} staged at ${stageCode}. Scan next pallet.`
     );
     setCurrentPallet(null);
+    // }, 1000);
   };
 
   const handleLoad = async (bayCode) => {
@@ -125,7 +218,7 @@ export default function ProcessPallets() {
       } else {
         // Might be a new pallet scan - confirm or treat as error
         setMessage(
-          "⚠️ Invalid barcode. Scan STAGE or BAY barcode, or press RESET."
+          "⚠️ Invalid barcode. Scan STAGE or BAY barcode, or press CANCEL."
         );
       }
     } else {
@@ -137,19 +230,6 @@ export default function ProcessPallets() {
   const handleInputChange = (event) => {
     const value = event.target.value;
     setScanInput(value);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    // Auto-submit after 150ms of no input (scan gun completes)
-    if (value.trim()) {
-      timeoutRef.current = setTimeout(() => {
-        processBarcode(value);
-        setScanInput(""); // Clear for next scan
-        inputRef.current?.focus();
-      }, 150);
-    }
   };
 
   const handleKeyDown = (event) => {
@@ -176,14 +256,24 @@ export default function ProcessPallets() {
     inputRef.current?.focus();
   }, [scanInput]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+    if (message.startsWith("✓")) {
+      const timer = setTimeout(() => {
+        setMessage("Scan ASN...");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
+  // Cleanup timeout on unmount
+  //   useEffect(() => {
+  //     return () => {
+  //       if (timeoutRef.current) {
+  //         clearTimeout(timeoutRef.current);
+  //       }
+  //     };
+  //   }, []);
 
   return (
     <Box
@@ -197,7 +287,7 @@ export default function ProcessPallets() {
         px: 1,
       }}
     >
-      <Container
+      <Box
         sx={{
           height: "100%",
           width: "100%",
@@ -208,6 +298,7 @@ export default function ProcessPallets() {
           justifyContent: "space-between",
           border: 1,
           borderColor: theme.palette.background.header,
+          //   theme.palette.background.header
           // backgroundColor: "#0f172a",
 
           borderRadius: 3,
@@ -227,7 +318,7 @@ export default function ProcessPallets() {
             }}
           >
             <img
-              src={PalletIcon}
+              src="/palletIcon.png"
               alt="Pallet Icon"
               style={{ height: 40, marginRight: 10, paddingRight: 10 }}
             />
@@ -246,19 +337,26 @@ export default function ProcessPallets() {
         {currentPallet && (
           <Box
             sx={{
+              p: 2,
+              width: "98%",
               mb: 2,
+              mt: 1,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              backgroundColor: "#000000ff",
-              p: 2,
+              backgroundColor: theme.palette.background.default,
+
               borderRadius: 2,
-              border: "2px solid #8f8f8fff",
-              maxWidth: "500px",
+              border: "2px solid #3dcf44ff",
+              //   maxWidth: "500px",
             }}
           >
-            <Typography variant="h6" gutterBottom>
-              Pallet ID: {currentPallet.id}
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ color: theme.palette.text.message }}
+            >
+              ASN: {currentPallet.asns[0].asn}
             </Typography>
             {currentPallet.asns.map((asn) => (
               <Box
@@ -271,9 +369,30 @@ export default function ProcessPallets() {
                   "&:last-child": { borderBottom: "none" },
                 }}
               >
-                <Typography variant="body1">ASN: {asn.asn}</Typography>
-                <Typography variant="body1">Item: {asn.item_id}</Typography>
-                <Typography variant="body1">Qty: {asn.quantity}</Typography>
+                <Typography
+                  sx={{ color: theme.palette.text.message }}
+                  variant="body1"
+                >
+                  PO: {asn.po_no}
+                </Typography>
+                <Typography
+                  sx={{ color: theme.palette.text.message }}
+                  variant="body1"
+                >
+                  Item: {asn.item_id}
+                </Typography>
+                <Typography
+                  sx={{ color: theme.palette.text.message }}
+                  variant="body1"
+                >
+                  Qty: {asn.quantity}
+                </Typography>
+                <Typography
+                  sx={{ color: theme.palette.text.message }}
+                  variant="body1"
+                >
+                  ASN's on pallet: {currentPallet.asns.length}
+                </Typography>
               </Box>
             ))}
           </Box>
@@ -287,8 +406,10 @@ export default function ProcessPallets() {
           onKeyDown={handleKeyDown}
           inputRef={inputRef}
           autoFocus
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           sx={{
-            mb: 2,
+            mt: 2,
             width: "95%",
             backgroundColor: theme.palette.input.main,
             borderRadius: 3.5,
@@ -310,6 +431,23 @@ export default function ProcessPallets() {
               },
           }}
         />
+        {currentPallet && (
+          <Box>
+            <Button
+              sx={{
+                color: theme.palette.background.paper,
+                bgcolor: "#6e49f5f1",
+                "&:focus": {
+                  outline: "none",
+                },
+              }}
+              variant="contained"
+              onClick={() => setAdditionalASNOpen(true)}
+            >
+              Additional ASN's
+            </Button>
+          </Box>
+        )}
 
         <Typography
           variant="h6"
@@ -320,6 +458,8 @@ export default function ProcessPallets() {
               ? "#4caf50"
               : message.startsWith("⚠️")
               ? "#ff9800"
+              : message.startsWith("Select Input")
+              ? "#d34e4eff"
               : theme.palette.text.message,
           }}
         >
@@ -329,14 +469,28 @@ export default function ProcessPallets() {
         {currentPallet && (
           <Button
             variant="outlined"
-            color="secondary"
+            // color={theme.palette.secondary.main}
             onClick={handleReset}
-            sx={{ mt: 2 }}
+            sx={{
+              my: 1,
+              color: theme.palette.secondary.main,
+              "&:focus": {
+                outline: "none",
+                backgroundColor: "transparent",
+              },
+            }}
           >
             Cancel
           </Button>
         )}
-      </Container>
+      </Box>
+      <AdditionalASN
+        isOpen={additionalASNOpen}
+        onClose={() => setAdditionalASNOpen(false)}
+        palletId={currentPallet ? currentPallet.id : null}
+        existingAsn={currentPallet ? currentPallet.asns[0] : 0}
+        onSave={handleSaveAsns}
+      />
     </Box>
   );
 }

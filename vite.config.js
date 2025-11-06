@@ -23,13 +23,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      devOptions: {
+        enabled: false
+      },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
-        name: "My PWA App",
-        short_name: "PWA App",
-        description: "My awesome Progressive Web App",
-        theme_color: "#020617", // Updated to match your dark theme
-        background_color: "#020617", // Updated to match your dark theme
+        name: "SLAMR",
+        short_name: "SLAMR",
+        description: "Pallet Tracking Application",
+        theme_color: "#020617",
+        background_color: "#020617",
         display: "standalone",
         icons: [
           {
