@@ -32,6 +32,7 @@ export const getTheme = (mode) =>
             },
             button: {
               backgroundColor: "#37393fff",
+              cancelBackgroundColor: "#040c22ff",
             },
             background: {
               // default: "#e0e0e0ff",
@@ -57,6 +58,7 @@ export const getTheme = (mode) =>
             },
             button: {
               backgroundColor: "#c6c6caff",
+              cancelBackgroundColor: "#d8d8d8ff",
             },
             background: {
               default: "#020617", // Main background
@@ -65,7 +67,7 @@ export const getTheme = (mode) =>
             },
             input: {
               main: "#53586dff",
-              background: "#4a4a4a",
+              background: "#494949ff",
             },
             //
             text: {

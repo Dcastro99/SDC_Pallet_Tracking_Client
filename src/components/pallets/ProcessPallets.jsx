@@ -1,7 +1,19 @@
 import { useState, useEffect, useRef } from "react";
-import { Container, Typography, TextField, Button, Box } from "@mui/material";
+import {
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import AdditionalASN from "../modals/AdditionalASN";
+import { fetchPalletByASN } from "../../services/asns";
+import { getLocationNameById } from "../../constants/LocationIds";
 
 export default function ProcessPallets() {
   const theme = useTheme();
@@ -9,6 +21,8 @@ export default function ProcessPallets() {
   const [currentPallet, setCurrentPallet] = useState(null);
   const [message, setMessage] = useState("Scan ASN ...");
   const [additionalASNOpen, setAdditionalASNOpen] = useState(false);
+  const [currentPalletLoc, setCurrentPalletLoc] = useState("");
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
 
@@ -25,6 +39,7 @@ export default function ProcessPallets() {
           quantity: 192,
           company_no: "SLK1",
           destination: "Elk Grove",
+          location: currentPalletLoc,
         },
       ],
       status_id: 1,
@@ -40,6 +55,7 @@ export default function ProcessPallets() {
           quantity: 144,
           company_no: "SLK1",
           destination: "Sacramento",
+          location: currentPalletLoc,
         },
         {
           asn: "ASN-101",
@@ -49,6 +65,7 @@ export default function ProcessPallets() {
           quantity: 96,
           company_no: "SLK2",
           destination: "Elk Grove",
+          location: currentPalletLoc,
         },
       ],
       status_id: 1,
@@ -109,39 +126,19 @@ export default function ProcessPallets() {
     console.log(`Fetching Pallet ID: ${id}`);
     setMessage("Loading pallet information...");
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    let data;
+    let distroId = "SDC";
+    try {
+      data = await fetchPalletByASN(id, distroId);
+    } catch (error) {
+      console.error("Error fetching pallet from API:", error);
 
-    // TODO: Replace with actual API call
-    // const response = await fetch('/api/process-pallet', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ palletId: id })
-    // });
-    // const data = await response.json();
+      // Extract the message from the response
+      const errorMessage =
+        error.response?.data?.message || error.message || "Unknown error";
 
-    // Simulate API response from mock database
-    let data = MOCK_DB.current[id];
-
-    // If pallet not found in database, create a new one
-    if (!data) {
-      data = {
-        id: parseInt(id) || id,
-        asns: [
-          {
-            asn: scanInput || `ASN-${id}`,
-            sequence_order: 1,
-            item_id: "CBO P17 ATX 4 14 6",
-            po_no: 803601,
-            quantity: 192,
-            company_no: "SLK1",
-            destination: "Elk Grove",
-          },
-        ],
-        status_id: 1,
-      };
-      // Store in mock database
-      MOCK_DB.current[id] = data;
+      setMessage(`⚠️ Error: ${errorMessage}`);
+      return;
     }
 
     console.log("Pallet data from API:", data);
@@ -153,6 +150,7 @@ export default function ProcessPallets() {
       setMessage(`Pallet status: ${data.status_id}. Scan next pallet.`);
     }
   };
+
   const handleFocus = () => {
     if (!currentPallet) {
       setMessage("Scan ASN...");
@@ -169,6 +167,11 @@ export default function ProcessPallets() {
   const handleStage = async (stageCode) => {
     console.log(`Staging pallet ${currentPallet.id} to ${stageCode}`);
     setMessage(`Staging to ${stageCode}...`);
+    setCurrentPalletLoc(stageCode);
+    let existingPallet = MOCK_DB.current[currentPallet.id];
+    existingPallet.asns.forEach((asn) => {
+      asn.location = stageCode;
+    });
 
     // TODO: API call
     // await fetch('/api/stage-pallet', {
@@ -187,6 +190,11 @@ export default function ProcessPallets() {
   const handleLoad = async (bayCode) => {
     console.log(`Loading pallet ${currentPallet.id} to ${bayCode}`);
     setMessage(`Loading to ${bayCode}...`);
+    setCurrentPalletLoc(bayCode);
+    let existingPallet = MOCK_DB.current[currentPallet.id];
+    existingPallet.asns.forEach((asn) => {
+      asn.location = bayCode;
+    });
 
     // TODO: API call
     // await fetch('/api/load-pallet', {
@@ -251,8 +259,13 @@ export default function ProcessPallets() {
       delete MOCK_DB.current[currentPallet.id];
     }
     setCurrentPallet(null);
+    setCurrentPalletLoc("");
+    setCancelDialogOpen(false);
     setScanInput("");
-    setMessage("Scan ASN...");
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+    // setMessage("Scan ASN...");
     console.log("RESET CALLED - After setting to null");
   };
 
@@ -262,12 +275,19 @@ export default function ProcessPallets() {
   }, [scanInput]);
 
   useEffect(() => {
+    console.log("current pallet loc changed:", currentPallet);
+    if (currentPallet) {
+      console.log("loc", currentPallet.current_location_id);
+      console.log(getLocationNameById(currentPallet.current_location_id));
+    }
+  }, [currentPallet]);
+
+  useEffect(() => {
     if (message.startsWith("✓")) {
       const timer = setTimeout(() => {
         if (!currentPallet) {
           setMessage("Scan ASN ...");
         } else if (currentPallet && currentPallet.status_id === 1) {
-          // Check if input is actually focused before setting the message
           if (document.activeElement === inputRef.current) {
             handleFocus();
           } else {
@@ -277,13 +297,23 @@ export default function ProcessPallets() {
       }, 3000);
 
       return () => clearTimeout(timer);
+    } else if (message.startsWith("⚠️")) {
+      const timer = setTimeout(() => {
+        if (currentPallet && currentPallet.status_id === 1) {
+          setMessage("Scan new location");
+        } else {
+          setMessage("Scan ASN ...");
+        }
+      }, 3000);
+
+      return () => clearTimeout(timer);
     }
   }, [message]);
-  useEffect(() => {
-    if (currentPallet) {
-      console.log("Current pallet updated:", currentPallet);
-    }
-  }, [currentPallet]);
+
+  // useEffect(() => {
+  //   console.log("Current pallets, MOCK DB:", MOCK_DB.current);
+  //   // delete MOCK_DB.current === 1000017;
+  // }, []);
 
   return (
     <Box
@@ -344,6 +374,7 @@ export default function ProcessPallets() {
           </Box>
         )}
 
+        {/* //-------------IF PALLET EXISTS, SHOW DETAILS-----------------// */}
         {currentPallet && (
           <Box
             sx={{
@@ -408,6 +439,15 @@ export default function ProcessPallets() {
             >
               ASN's on pallet: {currentPallet.asns.length}
             </Typography>
+            {currentPallet.current_location_id !== 0 && (
+              <Typography
+                sx={{ color: theme.palette.text.message }}
+                variant="body1"
+              >
+                Pallet location: {""}
+                {getLocationNameById(currentPallet.current_location_id)}
+              </Typography>
+            )}
           </Box>
         )}
 
@@ -444,6 +484,7 @@ export default function ProcessPallets() {
               },
           }}
         />
+        {/* //-------------IF PALLET EXISTS - SHOW MESSAGES & ACTION BUTTONS-----------------// */}
         {currentPallet && (
           <Button
             sx={{
@@ -480,9 +521,9 @@ export default function ProcessPallets() {
 
         {currentPallet && (
           <Button
-            variant="outlined"
+            // variant="outlined"
             // color={theme.palette.secondary.main}
-            onClick={handleReset}
+            onClick={() => setCancelDialogOpen(true)}
             sx={{
               // my: 1,
               mb: 1,
@@ -491,6 +532,8 @@ export default function ProcessPallets() {
                 outline: "none",
                 backgroundColor: "transparent",
               },
+              backgroundColor: "transparent",
+              boxShadow: "1px 1px 3px rgba(0,0,0,0.2)",
             }}
           >
             Cancel
@@ -505,6 +548,36 @@ export default function ProcessPallets() {
         onSave={handleSaveAsns}
         onExited={() => inputRef.current?.focus()}
       />
+      <Dialog
+        open={cancelDialogOpen}
+        onClose={() => setCancelDialogOpen(false)}
+      >
+        <DialogTitle sx={{ color: theme.palette.text.message }}>
+          Confirm Cancel
+        </DialogTitle>
+        <DialogContent sx={{ color: theme.palette.button.backgroundColor }}>
+          Are you sure you want to cancel?
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setCancelDialogOpen(false)}
+            sx={{ color: theme.palette.secondary.main }}
+          >
+            No
+          </Button>
+          <Button
+            onClick={handleReset}
+            sx={{
+              color: theme.palette.background.paper,
+              backgroundColor: theme.palette.button.backgroundColor,
+            }}
+            variant="contained"
+            autoFocus
+          >
+            Yes
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
