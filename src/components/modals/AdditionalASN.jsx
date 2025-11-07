@@ -133,10 +133,18 @@ const AdditionalASN = ({
 
     // Call the save handler passed from parent
     if (onSave) {
-      await onSave(dataToSend);
+      try {
+        await onSave(dataToSend);
+        // Only close if save was successful
+        onClose();
+      } catch (error) {
+        // Clear the additional ASNs on error
+        setAdditionalAsns([]);
+        setScanInput("");
+        // Close the dialog so user can see the error message
+        onClose();
+      }
     }
-
-    onClose();
   };
 
   return (

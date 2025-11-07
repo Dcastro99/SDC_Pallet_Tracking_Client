@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  Container,
   Typography,
   TextField,
   Button,
@@ -14,6 +13,7 @@ import { useTheme } from "@mui/material/styles";
 import AdditionalASN from "../modals/AdditionalASN";
 import { fetchPalletByASN } from "../../services/asns";
 import { getLocationNameById } from "../../constants/LocationIds";
+import { useCreateAsns, useAddAdditionalAsns } from "../../hooks/useAsns";
 
 export default function ProcessPallets() {
   const theme = useTheme();
@@ -25,52 +25,54 @@ export default function ProcessPallets() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
+  const createAsnsMutation = useCreateAsns();
+  const addAdditionalAsnsMutation = useAddAdditionalAsns();
 
   // Mock database - simulates pallets stored in the backend
-  const MOCK_DB = useRef({
-    1000017: {
-      id: 1000017,
-      asns: [
-        {
-          asn: "ASN-001",
-          sequence_order: 1,
-          item_id: "CBO P17 ATX 4 14 6",
-          po_no: 803601,
-          quantity: 192,
-          company_no: "SLK1",
-          destination: "Elk Grove",
-          location: currentPalletLoc,
-        },
-      ],
-      status_id: 1,
-    },
-    1000018: {
-      id: 1000018,
-      asns: [
-        {
-          asn: "ASN-100",
-          sequence_order: 1,
-          item_id: "XYZ P20 BTX 5 16 8",
-          po_no: 803602,
-          quantity: 144,
-          company_no: "SLK1",
-          destination: "Sacramento",
-          location: currentPalletLoc,
-        },
-        {
-          asn: "ASN-101",
-          sequence_order: 2,
-          item_id: "ABC P15 CTX 3 12 4",
-          po_no: 803603,
-          quantity: 96,
-          company_no: "SLK2",
-          destination: "Elk Grove",
-          location: currentPalletLoc,
-        },
-      ],
-      status_id: 1,
-    },
-  });
+  // const MOCK_DB = useRef({
+  //   1000017: {
+  //     id: 1000017,
+  //     asns: [
+  //       {
+  //         asn: "ASN-001",
+  //         sequence_order: 1,
+  //         item_id: "CBO P17 ATX 4 14 6",
+  //         po_no: 803601,
+  //         quantity: 192,
+  //         company_no: "SLK1",
+  //         destination: "Elk Grove",
+  //         location: currentPalletLoc,
+  //       },
+  //     ],
+  //     status_id: 1,
+  //   },
+  //   1000018: {
+  //     id: 1000018,
+  //     asns: [
+  //       {
+  //         asn: "ASN-100",
+  //         sequence_order: 1,
+  //         item_id: "XYZ P20 BTX 5 16 8",
+  //         po_no: 803602,
+  //         quantity: 144,
+  //         company_no: "SLK1",
+  //         destination: "Sacramento",
+  //         location: currentPalletLoc,
+  //       },
+  //       {
+  //         asn: "ASN-101",
+  //         sequence_order: 2,
+  //         item_id: "ABC P15 CTX 3 12 4",
+  //         po_no: 803603,
+  //         quantity: 96,
+  //         company_no: "SLK2",
+  //         destination: "Elk Grove",
+  //         location: currentPalletLoc,
+  //       },
+  //     ],
+  //     status_id: 1,
+  //   },
+  // });
 
   // Define your barcode prefixes/patterns
   const BARCODE_PATTERNS = {
@@ -85,63 +87,86 @@ export default function ProcessPallets() {
     console.log("Saving additional ASNs:", data);
     setMessage("Saving additional ASNs...");
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const userId = "6038";
+    const asn = data.additionalAsns.map((item) => item.asn).join(",");
+    console.log("New ASNs to add:", asn);
 
-    // TODO: Replace with actual API call
-    // const response = await fetch('/api/save-additional-asns', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     palletId: currentPallet.id,
-    //     additionalAsns: data.additionalAsns
-    //   })
-    // });
-    // const updatedPallet = await response.json();
+    try {
+      const response = await addAdditionalAsnsMutation.mutateAsync({
+        asn,
+        palletId: currentPallet.id,
+        userId,
+      });
 
-    // Simulate updating the "database" with new ASNs
-    const existingPallet = MOCK_DB.current[currentPallet.id];
-    const newAsns = data.additionalAsns.map((asn, index) => ({
-      ...asn,
-      sequence_order: existingPallet.asns.length + index + 1,
-    }));
+      console.log("Updated pallet from API:", response);
+      setCurrentPallet(response);
+      setMessage(`✓ ${data.additionalAsns.length} additional ASN(s) saved.`);
+    } catch (error) {
+      console.error("Full error object:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
 
-    // Update mock database
-    MOCK_DB.current[currentPallet.id] = {
-      ...existingPallet,
-      asns: [...existingPallet.asns, ...newAsns],
-    };
+      // Extract error message
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Unknown error";
 
-    // Simulate API response returning the updated pallet
-    const updatedPallet = MOCK_DB.current[currentPallet.id];
-
-    console.log("Updated pallet from API:", updatedPallet);
-
-    // Update state with data from "API"
-    setCurrentPallet(updatedPallet);
-    setMessage(`✓ ${newAsns.length} additional ASN(s) saved.`);
+      setMessage(`⚠️ ${errorMessage}`);
+      throw error;
+    }
   };
+
+  //------------------- PROCESS PALLET FUNCTION -------------------//
 
   const processPallet = async (id) => {
     console.log(`Fetching Pallet ID: ${id}`);
     setMessage("Loading pallet information...");
 
     let data;
-    let distroId = "SDC";
+    const distroId = "SDC"; // Get from auth context or props
+    const userId = "5555"; // Get from auth context or props
+
     try {
+      // Try to fetch existing pallet
       data = await fetchPalletByASN(id, distroId);
     } catch (error) {
-      console.error("Error fetching pallet from API:", error);
+      // If ASN not found, create it
+      if (error.response?.data?.message === "ASN not found") {
+        return await handleCreateNewAsn(id, distroId, userId);
+      }
 
-      // Extract the message from the response
-      const errorMessage =
-        error.response?.data?.message || error.message || "Unknown error";
-
+      // Handle other errors
+      const errorMessage = error.response?.data?.message || error.message;
       setMessage(`⚠️ Error: ${errorMessage}`);
       return;
     }
 
-    console.log("Pallet data from API:", data);
+    // Process the fetched pallet
+    processFetchedPallet(data);
+  };
+
+  const handleCreateNewAsn = async (id, distroId, userId) => {
+    setMessage("ASN not found. Creating new pallet...");
+
+    try {
+      await createAsnsMutation.mutateAsync({
+        asnList: [id],
+        distroId,
+        userId,
+      });
+
+      const data = await fetchPalletByASN(id, distroId);
+      processFetchedPallet(data);
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message;
+      setMessage(`⚠️ Error: ${errorMsg}`);
+    }
+  };
+
+  const processFetchedPallet = (data) => {
+    console.log("Pallet data:", data);
     setCurrentPallet(data);
 
     if (data.status_id === 1) {
@@ -152,6 +177,10 @@ export default function ProcessPallets() {
   };
 
   const handleFocus = () => {
+    // Don't overwrite error or success messages
+    if (message.startsWith("⚠️") || message.startsWith("✓")) {
+      return;
+    }
     if (!currentPallet) {
       setMessage("Scan ASN...");
     }
@@ -161,6 +190,10 @@ export default function ProcessPallets() {
   };
 
   const handleBlur = () => {
+    // Don't overwrite error or success messages
+    if (message.startsWith("⚠️") || message.startsWith("✓")) {
+      return;
+    }
     setMessage("Select Input to scan");
   };
 
@@ -253,11 +286,13 @@ export default function ProcessPallets() {
     }
   };
 
-  const handleReset = () => {
-    console.log("RESET CALLED - Before:", currentPallet);
-    if (currentPallet?.id) {
-      delete MOCK_DB.current[currentPallet.id];
-    }
+  //--------------- CANCEL FUNCTION -----------------//
+
+  const handleCancel = () => {
+    console.log("CANCEL CALLED - Before:", currentPallet);
+    // if (currentPallet?.id) {
+    //   delete MOCK_DB.current[currentPallet.id];
+    // }
     setCurrentPallet(null);
     setCurrentPalletLoc("");
     setCancelDialogOpen(false);
@@ -274,13 +309,7 @@ export default function ProcessPallets() {
     inputRef.current?.focus();
   }, [scanInput]);
 
-  useEffect(() => {
-    console.log("current pallet loc changed:", currentPallet);
-    if (currentPallet) {
-      console.log("loc", currentPallet.current_location_id);
-      console.log(getLocationNameById(currentPallet.current_location_id));
-    }
-  }, [currentPallet]);
+  //--------------- MESSAGE TIMEOUT EFFECT -----------------//
 
   useEffect(() => {
     if (message.startsWith("✓")) {
@@ -304,16 +333,11 @@ export default function ProcessPallets() {
         } else {
           setMessage("Scan ASN ...");
         }
-      }, 3000);
+      }, 5000);
 
       return () => clearTimeout(timer);
     }
   }, [message]);
-
-  // useEffect(() => {
-  //   console.log("Current pallets, MOCK DB:", MOCK_DB.current);
-  //   // delete MOCK_DB.current === 1000017;
-  // }, []);
 
   return (
     <Box
@@ -566,7 +590,7 @@ export default function ProcessPallets() {
             No
           </Button>
           <Button
-            onClick={handleReset}
+            onClick={handleCancel}
             sx={{
               color: theme.palette.background.paper,
               backgroundColor: theme.palette.button.backgroundColor,
