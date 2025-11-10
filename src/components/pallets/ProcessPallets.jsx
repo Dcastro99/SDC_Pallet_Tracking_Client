@@ -12,8 +12,12 @@ import {
 import { useTheme } from "@mui/material/styles";
 import AdditionalASN from "../modals/AdditionalASN";
 import { fetchPalletByASN } from "../../services/asns";
-import { getLocationNameById } from "../../constants/LocationIds";
-import { useCreateAsns, useAddAdditionalAsns } from "../../hooks/useAsns";
+import {
+  useCreateAsns,
+  useAddAdditionalAsns,
+  useStagePallet,
+  useLoadPalletToLocation,
+} from "../../hooks/useAsns";
 
 export default function ProcessPallets() {
   const theme = useTheme();
@@ -27,6 +31,8 @@ export default function ProcessPallets() {
   const timeoutRef = useRef(null);
   const createAsnsMutation = useCreateAsns();
   const addAdditionalAsnsMutation = useAddAdditionalAsns();
+  const stagePalletMutation = useStagePallet();
+  const loadPalletToLocationMutation = useLoadPalletToLocation();
 
   // Mock database - simulates pallets stored in the backend
   // const MOCK_DB = useRef({
@@ -99,7 +105,15 @@ export default function ProcessPallets() {
       });
 
       console.log("Updated pallet from API:", response);
-      setCurrentPallet(response);
+      console.log("Is response an array?", Array.isArray(response));
+
+      // If response is an array of ASNs, merge it with existing pallet
+      // If response is a full pallet object, use it directly
+      const updatedPallet = Array.isArray(response)
+        ? { ...currentPallet, asns: response }
+        : response;
+
+      setCurrentPallet(updatedPallet);
       setMessage(`✓ ${data.additionalAsns.length} additional ASN(s) saved.`);
     } catch (error) {
       console.error("Full error object:", error);
@@ -125,15 +139,17 @@ export default function ProcessPallets() {
     setMessage("Loading pallet information...");
 
     let data;
-    const distroId = "SDC"; // Get from auth context or props
+    const distroId = "TDC"; // Get from auth context or props
     const userId = "5555"; // Get from auth context or props
 
     try {
       // Try to fetch existing pallet
       data = await fetchPalletByASN(id, distroId);
+      setMessage("✓ Pallet loaded successfully"); // Add success message
     } catch (error) {
       // If ASN not found, create it
       if (error.response?.data?.message === "ASN not found") {
+        setMessage("ASN not found. Creating new..."); // Optional: before creating
         return await handleCreateNewAsn(id, distroId, userId);
       }
 
@@ -146,6 +162,8 @@ export default function ProcessPallets() {
     // Process the fetched pallet
     processFetchedPallet(data);
   };
+
+  //--------------- HANDLE CREATE NEW ASN FUNCTION -----------------//
 
   const handleCreateNewAsn = async (id, distroId, userId) => {
     setMessage("ASN not found. Creating new pallet...");
@@ -169,42 +187,65 @@ export default function ProcessPallets() {
     console.log("Pallet data:", data);
     setCurrentPallet(data);
 
-    if (data.status_id === 1) {
+    if (currentPallet) {
       setMessage("Scan new location");
-    } else {
-      setMessage(`Pallet status: ${data.status_id}. Scan next pallet.`);
     }
   };
 
+  //--------------- HANDLE FOCUS & BLUR -----------------//
+
   const handleFocus = () => {
-    // Don't overwrite error or success messages
     if (message.startsWith("⚠️") || message.startsWith("✓")) {
       return;
     }
     if (!currentPallet) {
       setMessage("Scan ASN...");
     }
-    if (currentPallet && currentPallet.status_id === 1) {
+    if (currentPallet) {
       setMessage("Scan new location");
     }
   };
 
   const handleBlur = () => {
-    // Don't overwrite error or success messages
     if (message.startsWith("⚠️") || message.startsWith("✓")) {
       return;
     }
     setMessage("Select Input to scan");
   };
 
+  //--------------- HANDLE STAGE FUNCTION -----------------//
+
   const handleStage = async (stageCode) => {
     console.log(`Staging pallet ${currentPallet.id} to ${stageCode}`);
     setMessage(`Staging to ${stageCode}...`);
-    setCurrentPalletLoc(stageCode);
-    let existingPallet = MOCK_DB.current[currentPallet.id];
-    existingPallet.asns.forEach((asn) => {
-      asn.location = stageCode;
-    });
+    // setCurrentPalletLoc(stageCode);
+    // let existingPallet = MOCK_DB.current[currentPallet.id];
+    // existingPallet.asns.forEach((asn) => {
+    //   asn.location = stageCode;
+    // });
+
+    try {
+      const userId = "6038";
+      const distroId = "SDC";
+      await stagePalletMutation.mutateAsync({
+        palletId: currentPallet.id,
+        locationName: stageCode,
+        userId,
+        distroId,
+      });
+      // setCurrentPallet(result);
+    } catch (error) {
+      console.error("Full error object:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Unknown error";
+      setMessage(`⚠️ ${errorMessage}`);
+      return;
+    }
 
     // TODO: API call
     // await fetch('/api/stage-pallet', {
@@ -214,20 +255,44 @@ export default function ProcessPallets() {
 
     // setTimeout(() => {
     setMessage(
-      `✓ Pallet ${currentPallet.id} staged at ${stageCode}. Scan next pallet.`
+      `✓ ASN ${
+        currentPallet.asns?.[0]?.asn || currentPallet.id
+      } loaded at ${stageCode}. Scan next pallet.`
     );
-    setCurrentPallet(null);
+    setCurrentPallet("");
     // }, 1000);
   };
+
+  //--------------- HANDLE LOAD FUNCTION -----------------//
 
   const handleLoad = async (bayCode) => {
     console.log(`Loading pallet ${currentPallet.id} to ${bayCode}`);
     setMessage(`Loading to ${bayCode}...`);
-    setCurrentPalletLoc(bayCode);
-    let existingPallet = MOCK_DB.current[currentPallet.id];
-    existingPallet.asns.forEach((asn) => {
-      asn.location = bayCode;
-    });
+    // setCurrentPalletLoc(bayCode);
+    // let existingPallet = MOCK_DB.current[currentPallet.id];
+    // existingPallet.asns.forEach((asn) => {
+    //   asn.location = bayCode;
+    // });
+
+    try {
+      const userId = "6038";
+      const distroId = "SDC";
+      await loadPalletToLocationMutation.mutateAsync({
+        palletId: currentPallet.id,
+        bayCode: bayCode,
+        userId,
+        distroId,
+      });
+      // setCurrentPallet(result);
+    } catch (error) {
+      console.error("Full error object:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Unknown error";
+      setMessage(`⚠️ ${errorMessage}`);
+      return;
+    }
 
     // TODO: API call
     // await fetch('/api/load-pallet', {
@@ -236,10 +301,14 @@ export default function ProcessPallets() {
     // });
 
     setMessage(
-      `✓ Pallet ${currentPallet.id} loaded at ${bayCode}. Scan next pallet.`
+      `✓ ASN ${
+        currentPallet.asns?.[0]?.asn || currentPallet.id
+      } loaded at ${bayCode}. Scan next pallet.`
     );
-    setCurrentPallet(null);
+    setCurrentPallet("");
   };
+
+  //--------------- PROCESS BARCODE FUNCTION -----------------//
 
   const processBarcode = (code) => {
     const trimmedCode = code.trim();
@@ -251,7 +320,7 @@ export default function ProcessPallets() {
     }
 
     // If we have a pallet and it's status_id === 1, check for stage/bay codes
-    if (currentPallet.status_id === 1) {
+    if (currentPallet) {
       if (BARCODE_PATTERNS.STAGE.test(trimmedCode)) {
         handleStage(trimmedCode);
       } else if (BARCODE_PATTERNS.BAY.test(trimmedCode)) {
@@ -268,10 +337,14 @@ export default function ProcessPallets() {
     }
   };
 
+  //--------------- HANDLE INPUT CHANGE -----------------//
+
   const handleInputChange = (event) => {
     const value = event.target.value;
     setScanInput(value);
   };
+
+  //--------------- KEY DOWN FUNCTION -----------------//
 
   const handleKeyDown = (event) => {
     if (event.key === "Enter") {
@@ -293,7 +366,7 @@ export default function ProcessPallets() {
     // if (currentPallet?.id) {
     //   delete MOCK_DB.current[currentPallet.id];
     // }
-    setCurrentPallet(null);
+    setCurrentPallet("");
     setCurrentPalletLoc("");
     setCancelDialogOpen(false);
     setScanInput("");
@@ -316,9 +389,9 @@ export default function ProcessPallets() {
       const timer = setTimeout(() => {
         if (!currentPallet) {
           setMessage("Scan ASN ...");
-        } else if (currentPallet && currentPallet.status_id === 1) {
+        } else if (currentPallet) {
           if (document.activeElement === inputRef.current) {
-            handleFocus();
+            setMessage("Scan new location");
           } else {
             setMessage("Select Input to scan");
           }
@@ -328,12 +401,12 @@ export default function ProcessPallets() {
       return () => clearTimeout(timer);
     } else if (message.startsWith("⚠️")) {
       const timer = setTimeout(() => {
-        if (currentPallet && currentPallet.status_id === 1) {
+        if (currentPallet) {
           setMessage("Scan new location");
         } else {
           setMessage("Scan ASN ...");
         }
-      }, 5000);
+      }, 3000);
 
       return () => clearTimeout(timer);
     }
@@ -418,7 +491,7 @@ export default function ProcessPallets() {
               //   maxWidth: "500px",
             }}
           >
-            {currentPallet.asns.map((asn) => (
+            {currentPallet.asns?.map((asn) => (
               <Box
                 key={asn.asn}
                 sx={{
@@ -461,15 +534,14 @@ export default function ProcessPallets() {
               sx={{ color: theme.palette.text.message }}
               variant="body1"
             >
-              ASN's on pallet: {currentPallet.asns.length}
+              ASN's on pallet: {currentPallet.asns?.length || 0}
             </Typography>
-            {currentPallet.current_location_id !== 0 && (
+            {currentPallet.current_location_id !== null && (
               <Typography
                 sx={{ color: theme.palette.text.message }}
                 variant="body1"
               >
-                Pallet location: {""}
-                {getLocationNameById(currentPallet.current_location_id)}
+                Pallet location: {currentPallet.location}
               </Typography>
             )}
           </Box>
@@ -568,7 +640,7 @@ export default function ProcessPallets() {
         isOpen={additionalASNOpen}
         onClose={() => setAdditionalASNOpen(false)}
         palletId={currentPallet ? currentPallet.id : null}
-        existingAsn={currentPallet ? currentPallet.asns[0] : 0}
+        existingAsn={currentPallet?.asns?.[0] || ""}
         onSave={handleSaveAsns}
         onExited={() => inputRef.current?.focus()}
       />

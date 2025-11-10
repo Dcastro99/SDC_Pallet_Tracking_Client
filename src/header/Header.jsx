@@ -25,7 +25,7 @@ const Header = ({ onNavigate, currentView }) => {
     { label: "Home", value: "home" },
     { label: "Process Pallets", value: "pallets" },
     { label: "Process Special FAB", value: "specialFab" },
-    { label: "Trucks Component", value: "trucks" },
+    { label: "Truck Assignment", value: "trucks" },
   ];
 
   const toggleDrawer = (open) => (event) => {
@@ -105,7 +105,7 @@ const Header = ({ onNavigate, currentView }) => {
             width: 250,
             height: "100%",
             color: "white",
-            backgroundColor: "#3a3838b4",
+            backgroundColor: "#0206175e",
           }}
           role="presentation"
         >

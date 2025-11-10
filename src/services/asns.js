@@ -25,12 +25,6 @@ export const createAsns = async (asnList, distroId, userId) => {
     throw error;
   }
 };
-// {
-//   "asn": "string",
-//   "palletId": 0,
-//   "userId": "string"
-// }
-
 export const addAdditionalAsns = async (asn, palletId, userId) => {
   try {
     const response = await api.post("/Pallets/add-asn-to-pallet", {
@@ -42,6 +36,41 @@ export const addAdditionalAsns = async (asn, palletId, userId) => {
   } catch (error) {
     console.error("Error adding additional ASNs:", error);
     console.error("Error response data:", error.response?.data);
+    throw error;
+  }
+};
+
+export const stagePallet = async (palletId, locationName, userId, distroId) => {
+  try {
+    const response = await api.post("/Pallets/stage-pallet", {
+      pallet_id: palletId,
+      location_name: locationName,
+      user_id: userId,
+      distro_id: distroId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error staging pallet:", error);
+    throw error;
+  }
+};
+
+export const loadPalletToLocation = async (
+  palletId,
+  bayCode,
+  userId,
+  distroId
+) => {
+  try {
+    const response = await api.post("/Pallets/load-pallet", {
+      pallet_id: palletId,
+      bay_door: bayCode,
+      user_id: userId,
+      distro_id: distroId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error loading pallet to location:", error);
     throw error;
   }
 };

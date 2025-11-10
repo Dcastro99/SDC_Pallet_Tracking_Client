@@ -92,7 +92,7 @@ export default function Home() {
               }}
               onClick={() => setView("trucks")}
             >
-              Trucks
+              Trucks Assignment
             </Button>
           </Grid>
         )}
