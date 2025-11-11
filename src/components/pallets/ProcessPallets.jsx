@@ -28,6 +28,7 @@ export default function ProcessPallets() {
   const [message, setMessage] = useState("Scan ASN ...");
   const [additionalASNOpen, setAdditionalASNOpen] = useState(false);
   const [unloadPalletOpen, setUnloadPalletOpen] = useState(false);
+  const [unloadPalletError, setUnloadPalletError] = useState("");
   const [currentPalletLoc, setCurrentPalletLoc] = useState("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const inputRef = useRef(null);
@@ -95,6 +96,7 @@ export default function ProcessPallets() {
 
   const handleUnloadPallet = async (locationName, statusId) => {
     setMessage("Unloading pallet...");
+    setUnloadPalletError(""); // Clear any previous errors
     try {
       const userId = "6038";
       const distroId = "SDC";
@@ -117,7 +119,8 @@ export default function ProcessPallets() {
       console.error("Error unloading pallet:", error);
       const errorMessage =
         error.response?.data?.message || error.message || "Unknown error";
-      setMessage(`⚠️ ${errorMessage}`);
+      setUnloadPalletError(`⚠️ ${errorMessage}`);
+      // Don't close the modal so user can see the error
     }
   };
 
@@ -730,11 +733,15 @@ export default function ProcessPallets() {
       </Dialog>
       <UnloadPallet
         isOpen={unloadPalletOpen}
-        onClose={() => setUnloadPalletOpen(false)}
+        onClose={() => {
+          setUnloadPalletOpen(false);
+          setUnloadPalletError(""); // Clear error when modal closes
+        }}
         onUnload={handleUnloadPallet}
         asnId={currentPallet?.asns?.[0]?.asn || currentPallet?.id || ""}
-        setMessage={setMessage}
+        setMessage={setUnloadPalletError}
         onExited={() => inputRef.current?.focus()}
+        apiError={unloadPalletError}
       />
     </Box>
   );

@@ -18,6 +18,7 @@ const UnloadPallet = ({
   asnId,
   setMessage,
   onExited,
+  apiError = "",
 }) => {
   const [selectedArea, setSelectedArea] = useState(null);
   const [textInput, setTextInput] = useState("");
@@ -25,6 +26,7 @@ const UnloadPallet = ({
   const [newStatusId, setNewStatusId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const inputRef = useRef(null);
+  const errorTimerRef = useRef(null);
   const theme = useTheme();
 
   const areas = [
@@ -49,8 +51,62 @@ const UnloadPallet = ({
       setSelectedArea(null);
       setTextInput("");
       setErrorMessage("");
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+        errorTimerRef.current = null;
+      }
     }
   }, [isOpen]);
+
+  // Handle API error: clear textfield and set 6-second timer
+  useEffect(() => {
+    if (apiError) {
+      setTextInput("");
+
+      // Clear any existing timer
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+      }
+
+      // Set 6-second timer to clear API error
+      errorTimerRef.current = setTimeout(() => {
+        if (setMessage) {
+          setMessage("");
+        }
+        errorTimerRef.current = null;
+      }, 6000);
+    }
+
+    return () => {
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+        errorTimerRef.current = null;
+      }
+    };
+  }, [apiError]);
+
+  // Handle local error message: set 6-second timer
+  useEffect(() => {
+    if (errorMessage) {
+      // Clear any existing timer
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+      }
+
+      // Set 6-second timer to clear local error
+      errorTimerRef.current = setTimeout(() => {
+        setErrorMessage("");
+        errorTimerRef.current = null;
+      }, 6000);
+    }
+
+    return () => {
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+        errorTimerRef.current = null;
+      }
+    };
+  }, [errorMessage]);
 
   const handleAreaSelect = (areaId) => {
     console.log("Selected area:", areaId);
@@ -95,7 +151,7 @@ const UnloadPallet = ({
     <Dialog
       open={isOpen}
       onClose={onClose}
-      fullWidth
+      fullScreen
       disableRestoreFocus
       slotProps={{
         paper: {
@@ -200,9 +256,33 @@ const UnloadPallet = ({
           size="small"
           fullWidth
           value={textInput}
+          onFocus={() => {
+            // Clear both local and API errors when user focuses on input
+            setErrorMessage("");
+            if (apiError && setMessage) {
+              setMessage("");
+            }
+
+            // Cancel the error timer
+            if (errorTimerRef.current) {
+              clearTimeout(errorTimerRef.current);
+              errorTimerRef.current = null;
+            }
+          }}
           onChange={(e) => {
             setTextInput(e.target.value);
-            setErrorMessage(""); // Clear error when user types
+
+            // Clear both local and API errors when user types
+            setErrorMessage("");
+            if (apiError && setMessage) {
+              setMessage("");
+            }
+
+            // Cancel the error timer
+            if (errorTimerRef.current) {
+              clearTimeout(errorTimerRef.current);
+              errorTimerRef.current = null;
+            }
           }}
           onKeyDown={(e) => e.key === "Enter" && handleDone()}
           placeholder={placeholder}
@@ -225,7 +305,7 @@ const UnloadPallet = ({
         />
 
         {/* Error Message */}
-        {errorMessage && (
+        {(apiError || errorMessage) && (
           <Typography
             sx={{
               mt: 2,
@@ -234,7 +314,7 @@ const UnloadPallet = ({
               fontSize: "0.95rem",
             }}
           >
-            {errorMessage}
+            {apiError || errorMessage}
           </Typography>
         )}
       </DialogContent>

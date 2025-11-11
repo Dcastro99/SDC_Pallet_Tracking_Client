@@ -152,7 +152,7 @@ const AdditionalASN = ({
       open={isOpen}
       onClose={onClose}
       // maxWidth="md"
-      fullWidth
+      fullScreen
       disableRestoreFocus
       slotProps={{
         paper: {

@@ -6,7 +6,12 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     port: 5173,
-    allowedHosts: [".loca.lt"],
+    allowedHosts: [".trycloudflare.com", ".loca.lt"],
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 4173,
+    allowedHosts: [".trycloudflare.com", ".loca.lt"],
   },
   esbuild: {
     loader: "jsx",
@@ -24,7 +29,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       devOptions: {
-        enabled: false
+        enabled: false,
       },
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
