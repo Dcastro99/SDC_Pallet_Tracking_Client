@@ -11,12 +11,14 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import AdditionalASN from "../modals/AdditionalASN";
+import UnloadPallet from "../modals/UnloadPallet";
 import { fetchPalletByASN } from "../../services/asns";
 import {
   useCreateAsns,
   useAddAdditionalAsns,
   useStagePallet,
   useLoadPalletToLocation,
+  useUnloadPalletFromLocation,
 } from "../../hooks/useAsns";
 
 export default function ProcessPallets() {
@@ -25,6 +27,7 @@ export default function ProcessPallets() {
   const [currentPallet, setCurrentPallet] = useState(null);
   const [message, setMessage] = useState("Scan ASN ...");
   const [additionalASNOpen, setAdditionalASNOpen] = useState(false);
+  const [unloadPalletOpen, setUnloadPalletOpen] = useState(false);
   const [currentPalletLoc, setCurrentPalletLoc] = useState("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const inputRef = useRef(null);
@@ -33,6 +36,7 @@ export default function ProcessPallets() {
   const addAdditionalAsnsMutation = useAddAdditionalAsns();
   const stagePalletMutation = useStagePallet();
   const loadPalletToLocationMutation = useLoadPalletToLocation();
+  const unloadPalletMutation = useUnloadPalletFromLocation();
 
   // Mock database - simulates pallets stored in the backend
   // const MOCK_DB = useRef({
@@ -87,6 +91,34 @@ export default function ProcessPallets() {
     // Or use specific barcode ranges if they're numeric
     // STAGE: (code) => code >= 5000 && code < 6000,
     // BAY: (code) => code >= 6000 && code < 7000,
+  };
+
+  const handleUnloadPallet = async (locationName, statusId) => {
+    setMessage("Unloading pallet...");
+    try {
+      const userId = "6038";
+      const distroId = "SDC";
+      console.log(
+        `Unloading pallet ${currentPallet.id} to ${locationName} with status ${statusId}`
+      );
+
+      await unloadPalletMutation.mutateAsync({
+        palletId: currentPallet.id,
+        locationName: locationName,
+        statusId: statusId,
+        userId,
+        distroId,
+      });
+
+      setMessage(`✓ Pallet unloaded to ${locationName}. Scan new ASN.`);
+      setCurrentPallet(null);
+      setUnloadPalletOpen(false);
+    } catch (error) {
+      console.error("Error unloading pallet:", error);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Unknown error";
+      setMessage(`⚠️ ${errorMessage}`);
+    }
   };
 
   const handleSaveAsns = async (data) => {
@@ -422,6 +454,7 @@ export default function ProcessPallets() {
         alignItems: "center",
         justifyContent: "center",
         px: 1,
+        overflowY: "hidden",
       }}
     >
       <Box
@@ -477,7 +510,7 @@ export default function ProcessPallets() {
             sx={{
               p: 2,
               width: "98%",
-              maxHeight: 300,
+              maxHeight: 350,
               mb: 2,
               mt: 1,
               display: "flex",
@@ -547,41 +580,60 @@ export default function ProcessPallets() {
           </Box>
         )}
 
-        <TextField
-          label="Scan Barcode"
-          variant="outlined"
-          value={scanInput}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          inputRef={inputRef}
-          autoFocus
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          sx={{
-            // mt: 1,
-            width: "95%",
-            backgroundColor: theme.palette.input.main,
-            borderRadius: 3.5,
-            "& .MuiInputLabel-root": {
-              color: theme.palette.text.lb,
-            },
-            "& .MuiInputLabel-root.Mui-focused": {
-              color: theme.palette.text.lb,
-            },
-            "& .MuiOutlinedInput-root": {
-              borderRadius: 3,
-            },
-            "& .MuiOutlinedInput-notchedOutline": {
-              borderColor: theme.palette.border.main,
-            },
-            "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-              {
-                borderColor: theme.palette.background.header,
+        {!currentPallet?.location?.startsWith("BAY") && (
+          <TextField
+            label="Scan Barcode"
+            variant="outlined"
+            value={scanInput}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            inputRef={inputRef}
+            autoFocus
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            sx={{
+              // mt: 1,
+              width: "95%",
+              backgroundColor: theme.palette.input.main,
+              borderRadius: 3.5,
+              "& .MuiInputLabel-root": {
+                color: theme.palette.text.lb,
               },
-          }}
-        />
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: theme.palette.text.lb,
+              },
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 3,
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: theme.palette.border.main,
+              },
+              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                {
+                  borderColor: theme.palette.background.header,
+                },
+            }}
+          />
+        )}
+        {currentPallet?.location?.startsWith("BAY") && (
+          <Button
+            sx={{
+              mt: 2,
+              color: theme.palette.background.paper,
+              bgcolor: theme.palette.button.cancelBackgroundColor,
+              "&:focus": {
+                outline: "none",
+              },
+            }}
+            variant="contained"
+            onClick={() => setUnloadPalletOpen(true)}
+          >
+            Unload Pallet
+          </Button>
+        )}
+
         {/* //-------------IF PALLET EXISTS - SHOW MESSAGES & ACTION BUTTONS-----------------// */}
-        {currentPallet && (
+        {currentPallet && !currentPallet?.location?.startsWith("BAY") && (
           <Button
             sx={{
               mt: 1,
@@ -598,22 +650,24 @@ export default function ProcessPallets() {
           </Button>
         )}
 
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 1,
-            textAlign: "center",
-            color: message.startsWith("✓")
-              ? "#4caf50"
-              : message.startsWith("⚠️")
-              ? "#ff9800"
-              : message.startsWith("Select Input")
-              ? "#d34e4eff"
-              : theme.palette.text.message,
-          }}
-        >
-          {message}
-        </Typography>
+        {!currentPallet?.location?.startsWith("BAY") && (
+          <Typography
+            variant="h6"
+            sx={{
+              mb: 1,
+              textAlign: "center",
+              color: message.startsWith("✓")
+                ? "#4caf50"
+                : message.startsWith("⚠️")
+                ? "#ff9800"
+                : message.startsWith("Select Input")
+                ? "#d34e4eff"
+                : theme.palette.text.message,
+            }}
+          >
+            {message}
+          </Typography>
+        )}
 
         {currentPallet && (
           <Button
@@ -674,6 +728,14 @@ export default function ProcessPallets() {
           </Button>
         </DialogActions>
       </Dialog>
+      <UnloadPallet
+        isOpen={unloadPalletOpen}
+        onClose={() => setUnloadPalletOpen(false)}
+        onUnload={handleUnloadPallet}
+        asnId={currentPallet?.asns?.[0]?.asn || currentPallet?.id || ""}
+        setMessage={setMessage}
+        onExited={() => inputRef.current?.focus()}
+      />
     </Box>
   );
 }

@@ -5,6 +5,7 @@ import {
   addAdditionalAsns,
   stagePallet,
   loadPalletToLocation,
+  unloadPalletFromLocation,
 } from "../services/asns";
 
 export const useCreateAsns = () => {
@@ -62,6 +63,27 @@ export const useLoadPalletToLocation = () => {
     },
     onError: (error) => {
       console.error("Error in useLoadPalletToLocation mutation:", error);
+      console.error("Error details:", error.response?.data);
+    },
+  });
+};
+
+export const useUnloadPalletFromLocation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ palletId, locationName, statusId, userId, distroId }) =>
+      unloadPalletFromLocation(
+        palletId,
+        locationName,
+        statusId,
+        userId,
+        distroId
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["asns"]);
+    },
+    onError: (error) => {
+      console.error("Error in useUnloadPalletFromLocation mutation:", error);
       console.error("Error details:", error.response?.data);
     },
   });

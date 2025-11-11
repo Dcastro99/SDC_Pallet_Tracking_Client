@@ -74,3 +74,25 @@ export const loadPalletToLocation = async (
     throw error;
   }
 };
+
+export const unloadPalletFromLocation = async (
+  palletId,
+  locationName,
+  statusId,
+  userId,
+  distroId
+) => {
+  try {
+    const response = await api.post("/Pallets/unload-pallet", {
+      pallet_id: palletId,
+      bay_door: locationName,
+      status_id: statusId,
+      user_id: userId,
+      distro_id: distroId,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error unloading pallet from location:", error);
+    throw error;
+  }
+};
