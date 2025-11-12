@@ -169,11 +169,11 @@ const UnloadPallet = ({
         },
       }}
     >
-      <DialogContent sx={{ px: 3, py: 4 }}>
+      <DialogContent sx={{ px: 2, py: 2 }}>
         <Typography
           variant="h5"
           align="center"
-          sx={{ mb: 3, fontWeight: 500, color: theme.palette.text.message }}
+          sx={{ mb: 2, fontWeight: 500, color: theme.palette.text.message }}
         >
           Unload Pallet
         </Typography>
@@ -321,15 +321,22 @@ const UnloadPallet = ({
 
       {/* Action buttons */}
       <DialogActions
-        sx={{ flexDirection: "column", gap: 1.5, px: 3, pb: 3, pt: 0 }}
+        sx={{
+          flexDirection: "column",
+          gap: 1,
+          px: 1,
+          // pb: 3,
+          pt: 0,
+          // border: "1px solid red",
+        }}
       >
         <Button
+          size="small"
           onClick={handleDone}
           fullWidth
           variant="contained"
           sx={{
             bgcolor: "#6e49f5f1",
-            py: 1.5,
             fontSize: "1rem",
             textTransform: "none",
             "&:hover": {
@@ -343,6 +350,7 @@ const UnloadPallet = ({
           Done
         </Button>
         <Button
+          size="small"
           onClick={onClose}
           fullWidth
           sx={{

@@ -69,7 +69,7 @@ const Header = ({ onNavigate, currentView }) => {
           <Box
             sx={{
               position: "absolute",
-              left: "45%",
+              left: "49%",
               transform: "translateX(-50%)",
               display: "flex",
               alignItems: "center",

@@ -17,7 +17,7 @@ const AdditionalASN = ({
   isOpen,
   onClose,
   palletId,
-  existingAsn,
+  existingAsns,
   onSave,
   onExited,
 }) => {
@@ -58,7 +58,7 @@ const AdditionalASN = ({
     if (scanInput.trim()) {
       const newAsn = {
         asn: scanInput.trim(),
-        sequence_order: additionalAsns.length + 2, // +2 because first ASN is sequence 1
+        sequence_order: additionalAsns.length + existingAsns.length + 1,
         tempId: Date.now(), // Temporary ID for tracking
       };
       setAdditionalAsns([...additionalAsns, newAsn]);
@@ -71,7 +71,7 @@ const AdditionalASN = ({
     // Reorder sequence numbers
     const reordered = updated.map((asn, i) => ({
       ...asn,
-      sequence_order: i + 2,
+      sequence_order: i + existingAsns.length + 1,
     }));
     setAdditionalAsns(reordered);
   };
@@ -102,7 +102,7 @@ const AdditionalASN = ({
 
     if (isDragging.current && deltaX < 0) {
       setDragOffset(Math.max(deltaX, -100));
-      e.preventDefault();
+      // e.preventDefault();
     }
   };
 
@@ -121,13 +121,6 @@ const AdditionalASN = ({
       id: palletId,
       additionalAsns: additionalAsns.map((asn) => ({
         asn: asn.asn,
-        // sequence_order: asn.sequence_order,
-        // // These fields might come from the existing ASN or be separate inputs
-        // item_id: existingAsn.item_id,
-        // po_no: existingAsn.po_no,
-        // quantity: existingAsn.quantity,
-        // company_no: existingAsn.company_no,
-        // destination: existingAsn.destination,
       })),
     };
 
@@ -180,27 +173,51 @@ const AdditionalASN = ({
           Add ASN
         </Typography>
 
-        {/* Display existing ASN */}
-        <Paper
-          elevation={0}
+        {/* Display existing ASNs */}
+        <Box
           sx={{
-            bgcolor: "#3a3a3a",
-            border: "1px solid #5a5a5a",
-            borderRadius: 1,
-            p: 2,
+            maxHeight: 250,
+            overflowY: "auto",
             mb: 2,
+            "&::-webkit-scrollbar": {
+              width: "6px",
+            },
+            "&::-webkit-scrollbar-track": {
+              bgcolor: "#2a2a2a",
+              borderRadius: "3px",
+            },
+            "&::-webkit-scrollbar-thumb": {
+              bgcolor: "#5a5a5a",
+              borderRadius: "3px",
+            },
           }}
         >
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography sx={{ color: "#999" }}>1</Typography>
-            <Typography sx={{ color: "#999" }}>ASN:</Typography>
-            <Typography
-              sx={{ fontWeight: 500, fontSize: "1.125rem", color: "white" }}
+          {existingAsns.map((asn, index) => (
+            <Paper
+              key={asn.asn || index}
+              elevation={0}
+              sx={{
+                bgcolor: "#3a3a3a",
+                border: "1px solid #5a5a5a",
+                borderRadius: 1,
+                p: 1,
+                mb: 1.5,
+              }}
             >
-              {existingAsn.asn}
-            </Typography>
-          </Stack>
-        </Paper>
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Typography sx={{ color: "#999" }}>
+                  {asn.sequence_order || index + 1}
+                </Typography>
+                <Typography sx={{ color: "#999" }}>ASN:</Typography>
+                <Typography
+                  sx={{ fontWeight: 500, fontSize: "1.125rem", color: "white" }}
+                >
+                  {asn.asn}
+                </Typography>
+              </Stack>
+            </Paper>
+          ))}
+        </Box>
 
         {/* Display additional ASNs with swipe to delete */}
         <Box
@@ -304,6 +321,7 @@ const AdditionalASN = ({
         {/* Scan input */}
         <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
           <TextField
+            size="small"
             fullWidth
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
@@ -341,12 +359,13 @@ const AdditionalASN = ({
         sx={{ flexDirection: "column", gap: 1.5, px: 3, pb: 3, pt: 0 }}
       >
         <Button
+          size="small"
           onClick={handleDone}
           fullWidth
           variant="contained"
           sx={{
             bgcolor: "#6e49f5f1",
-            py: 1.5,
+            // py: 1.5,
             fontSize: "1rem",
             textTransform: "none",
             "&:hover": {
@@ -360,6 +379,7 @@ const AdditionalASN = ({
           Done
         </Button>
         <Button
+          size="small"
           onClick={onClose}
           fullWidth
           sx={{

@@ -9,9 +9,11 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { useTheme } from "@mui/material/styles";
 import AdditionalASN from "../modals/AdditionalASN";
 import UnloadPallet from "../modals/UnloadPallet";
+import PalletEditButton from "../modals/PalletEditButton";
 import { fetchPalletByASN } from "../../services/asns";
 import {
   useCreateAsns,
@@ -31,6 +33,8 @@ export default function ProcessPallets() {
   const [unloadPalletError, setUnloadPalletError] = useState("");
   const [currentPalletLoc, setCurrentPalletLoc] = useState("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [deleteAsnOpen, setDeleteAsnOpen] = useState(false);
+  const [selectedAsn, setSelectedAsn] = useState(null);
   const inputRef = useRef(null);
   const timeoutRef = useRef(null);
   const createAsnsMutation = useCreateAsns();
@@ -39,52 +43,6 @@ export default function ProcessPallets() {
   const loadPalletToLocationMutation = useLoadPalletToLocation();
   const unloadPalletMutation = useUnloadPalletFromLocation();
 
-  // Mock database - simulates pallets stored in the backend
-  // const MOCK_DB = useRef({
-  //   1000017: {
-  //     id: 1000017,
-  //     asns: [
-  //       {
-  //         asn: "ASN-001",
-  //         sequence_order: 1,
-  //         item_id: "CBO P17 ATX 4 14 6",
-  //         po_no: 803601,
-  //         quantity: 192,
-  //         company_no: "SLK1",
-  //         destination: "Elk Grove",
-  //         location: currentPalletLoc,
-  //       },
-  //     ],
-  //     status_id: 1,
-  //   },
-  //   1000018: {
-  //     id: 1000018,
-  //     asns: [
-  //       {
-  //         asn: "ASN-100",
-  //         sequence_order: 1,
-  //         item_id: "XYZ P20 BTX 5 16 8",
-  //         po_no: 803602,
-  //         quantity: 144,
-  //         company_no: "SLK1",
-  //         destination: "Sacramento",
-  //         location: currentPalletLoc,
-  //       },
-  //       {
-  //         asn: "ASN-101",
-  //         sequence_order: 2,
-  //         item_id: "ABC P15 CTX 3 12 4",
-  //         po_no: 803603,
-  //         quantity: 96,
-  //         company_no: "SLK2",
-  //         destination: "Elk Grove",
-  //         location: currentPalletLoc,
-  //       },
-  //     ],
-  //     status_id: 1,
-  //   },
-  // });
-
   // Define your barcode prefixes/patterns
   const BARCODE_PATTERNS = {
     STAGE: /^STAGE-/i, // e.g., "STAGE-A1", "STAGE-B2"
@@ -92,6 +50,17 @@ export default function ProcessPallets() {
     // Or use specific barcode ranges if they're numeric
     // STAGE: (code) => code >= 5000 && code < 6000,
     // BAY: (code) => code >= 6000 && code < 7000,
+  };
+
+  const handleDeleteAsn = async (asn) => {
+    console.log("Deleting ASN:", asn);
+    if (!asn || !asn) {
+      console.error("Invalid ASN:", asn);
+      setMessage("⚠️ Error: Invalid ASN");
+      return;
+    }
+    // TODO: Add API call here to delete the ASN
+    setMessage(`✓ ASN ${asn} deleted successfully.`);
   };
 
   const handleUnloadPallet = async (locationName, statusId) => {
@@ -485,7 +454,7 @@ export default function ProcessPallets() {
               display: "flex",
               flexDirection: "row",
               alignItems: "center",
-              pl: 2,
+              pl: 3,
               backgroundColor: theme.palette.background.header,
               borderRadius: "10px 10px 0 0",
             }}
@@ -493,14 +462,14 @@ export default function ProcessPallets() {
             <img
               src="/palletIcon.png"
               alt="Pallet Icon"
-              style={{ height: 40, marginRight: 10, paddingRight: 10 }}
+              style={{ height: 30, marginRight: 10, paddingRight: 10 }}
             />
             <Typography
-              variant="h5"
+              variant="h6"
               component="h1"
               color={theme.palette.text.primary}
               gutterBottom
-              paddingTop={2}
+              paddingTop={1}
             >
               Process Pallets
             </Typography>
@@ -511,11 +480,11 @@ export default function ProcessPallets() {
         {currentPallet && (
           <Box
             sx={{
-              p: 2,
+              px: 1,
               width: "98%",
               maxHeight: 350,
-              mb: 2,
-              mt: 1,
+              mb: 1,
+              mt: 0.5,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -527,7 +496,7 @@ export default function ProcessPallets() {
               //   maxWidth: "500px",
             }}
           >
-            {currentPallet.asns?.map((asn) => (
+            {currentPallet.asns?.map((asn, index) => (
               <Box
                 key={asn.asn}
                 sx={{
@@ -538,14 +507,40 @@ export default function ProcessPallets() {
                   "&:last-child": { borderBottom: "none" },
                 }}
               >
-                <Typography
-                  variant="h6"
-                  textAlign="center"
-                  gutterBottom
-                  sx={{ color: theme.palette.text.message }}
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    // alignContent: "center",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  ASN: {asn.asn}
-                </Typography>
+                  <Box sx={{ width: 24 }} />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: theme.palette.text.message,
+                    }}
+                  >
+                    ASN: {asn.asn}
+                  </Typography>
+
+                  {index === 0 ? (
+                    <MoreVertIcon
+                      onClick={() => {
+                        setSelectedAsn(asn);
+                        setDeleteAsnOpen(true);
+                      }}
+                      sx={{
+                        color: theme.palette.text.message,
+                        cursor: "pointer",
+                      }}
+                    />
+                  ) : (
+                    <Box sx={{ width: 24 }} />
+                  )}
+                </Box>
                 <Typography
                   sx={{ color: theme.palette.text.message }}
                   variant="body1"
@@ -570,14 +565,15 @@ export default function ProcessPallets() {
               sx={{ color: theme.palette.text.message }}
               variant="body1"
             >
-              ASN's on pallet: {currentPallet.asns?.length || 0}
+              ASN's on pallet:{" "}
+              <strong>{currentPallet.asns?.length || 0}</strong>
             </Typography>
             {currentPallet.current_location_id !== null && (
               <Typography
                 sx={{ color: theme.palette.text.message }}
                 variant="body1"
               >
-                Pallet location: {currentPallet.location}
+                Pallet location: <strong>{currentPallet.location}</strong>
               </Typography>
             )}
           </Box>
@@ -585,6 +581,7 @@ export default function ProcessPallets() {
 
         {!currentPallet?.location?.startsWith("BAY") && (
           <TextField
+            size="small"
             label="Scan Barcode"
             variant="outlined"
             value={scanInput}
@@ -598,7 +595,7 @@ export default function ProcessPallets() {
               // mt: 1,
               width: "95%",
               backgroundColor: theme.palette.input.main,
-              borderRadius: 3.5,
+              borderRadius: 1.5,
               "& .MuiInputLabel-root": {
                 color: theme.palette.text.lb,
               },
@@ -606,7 +603,7 @@ export default function ProcessPallets() {
                 color: theme.palette.text.lb,
               },
               "& .MuiOutlinedInput-root": {
-                borderRadius: 3,
+                borderRadius: 1,
               },
               "& .MuiOutlinedInput-notchedOutline": {
                 borderColor: theme.palette.border.main,
@@ -620,6 +617,7 @@ export default function ProcessPallets() {
         )}
         {currentPallet?.location?.startsWith("BAY") && (
           <Button
+            size="small"
             sx={{
               mt: 2,
               color: theme.palette.background.paper,
@@ -638,6 +636,7 @@ export default function ProcessPallets() {
         {/* //-------------IF PALLET EXISTS - SHOW MESSAGES & ACTION BUTTONS-----------------// */}
         {currentPallet && !currentPallet?.location?.startsWith("BAY") && (
           <Button
+            size="small"
             sx={{
               mt: 1,
               color: theme.palette.background.paper,
@@ -655,7 +654,7 @@ export default function ProcessPallets() {
 
         {!currentPallet?.location?.startsWith("BAY") && (
           <Typography
-            variant="h6"
+            // variant="h6"
             sx={{
               mb: 1,
               textAlign: "center",
@@ -674,6 +673,7 @@ export default function ProcessPallets() {
 
         {currentPallet && (
           <Button
+            size="small"
             // variant="outlined"
             // color={theme.palette.secondary.main}
             onClick={() => setCancelDialogOpen(true)}
@@ -697,7 +697,7 @@ export default function ProcessPallets() {
         isOpen={additionalASNOpen}
         onClose={() => setAdditionalASNOpen(false)}
         palletId={currentPallet ? currentPallet.id : null}
-        existingAsn={currentPallet?.asns?.[0] || ""}
+        existingAsns={currentPallet?.asns || []}
         onSave={handleSaveAsns}
         onExited={() => inputRef.current?.focus()}
       />
@@ -742,6 +742,15 @@ export default function ProcessPallets() {
         setMessage={setUnloadPalletError}
         onExited={() => inputRef.current?.focus()}
         apiError={unloadPalletError}
+      />
+      <PalletEditButton
+        isOpen={deleteAsnOpen}
+        onClose={() => {
+          setDeleteAsnOpen(false);
+          setSelectedAsn(null);
+        }}
+        asn={selectedAsn}
+        onDelete={handleDeleteAsn}
       />
     </Box>
   );
