@@ -130,6 +130,8 @@ const AdditionalASN = ({
         await onSave(dataToSend);
         // Only close if save was successful
         onClose();
+        setAdditionalAsns([]);
+        setScanInput("");
       } catch (error) {
         // Clear the additional ASNs on error
         setAdditionalAsns([]);

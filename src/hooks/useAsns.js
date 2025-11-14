@@ -6,6 +6,8 @@ import {
   stagePallet,
   loadPalletToLocation,
   unloadPalletFromLocation,
+  deleteAsnFromPallet,
+  deletePallet,
 } from "../services/asns";
 
 export const useCreateAsns = () => {
@@ -17,9 +19,9 @@ export const useCreateAsns = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["asns"]);
     },
-    onError: (error) => {
-      console.error("Error in useCreateAsns mutation:", error);
-    },
+    // onError: (error) => {
+    //   console.error("Error in useCreateAsns mutation:", error);
+    // },
   });
 };
 
@@ -31,10 +33,9 @@ export const useAddAdditionalAsns = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["asns"]);
     },
-    onError: (error) => {
-      console.error("Error in useAddAdditionalAsns mutation:", error);
-      console.error("Error details:", error.response?.data);
-    },
+    // onError: (error) => {
+    //   console.error("Error details:", error.response?.data);
+    // },
   });
 };
 
@@ -46,10 +47,10 @@ export const useStagePallet = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["asns"]);
     },
-    onError: (error) => {
-      console.error("Error in useStagePallet mutation:", error);
-      console.error("Error details:", error.response?.data);
-    },
+    // onError: (error) => {
+    //   console.error("Error in useStagePallet mutation:", error);
+    //   console.error("Error details:", error.response?.data);
+    // },
   });
 };
 
@@ -61,10 +62,10 @@ export const useLoadPalletToLocation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["asns"]);
     },
-    onError: (error) => {
-      console.error("Error in useLoadPalletToLocation mutation:", error);
-      console.error("Error details:", error.response?.data);
-    },
+    // onError: (error) => {
+    //   console.error("Error in useLoadPalletToLocation mutation:", error);
+    //   console.error("Error details:", error.response?.data);
+    // },
   });
 };
 
@@ -82,9 +83,39 @@ export const useUnloadPalletFromLocation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(["asns"]);
     },
-    onError: (error) => {
-      console.error("Error in useUnloadPalletFromLocation mutation:", error);
-      console.error("Error details:", error.response?.data);
+    // onError: (error) => {
+    //   console.error("Error in useUnloadPalletFromLocation mutation:", error);
+    //   console.error("Error details:", error.response?.data);
+    // },
+  });
+};
+
+export const useDeleteAsnFromPallet = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asnNumber, distroId, userId }) =>
+      deleteAsnFromPallet(asnNumber, distroId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["asns"]);
     },
+    // onError: (error) => {
+    //   console.error("Error in useDeleteAsnFromPallet mutation:", error);
+    //   console.error("Error details:", error.response?.data);
+    // },
+  });
+};
+
+export const useDeletePallet = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ palletId, userId, distroId }) =>
+      deletePallet(palletId, userId, distroId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["asns"]);
+    },
+    // onError: (error) => {
+    //   console.error("Error in useDeleteAsnFromPallet mutation:", error);
+    //   console.error("Error details:", error.response?.data);
+    // },
   });
 };

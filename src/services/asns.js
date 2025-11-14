@@ -7,7 +7,9 @@ export const fetchPalletByASN = async (asnNumber, distroId) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching pallet by ASN:", error);
+    if (error.response?.status === 404) {
+      return null;
+    }
     throw error;
   }
 };
@@ -34,8 +36,6 @@ export const addAdditionalAsns = async (asn, palletId, userId) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Error adding additional ASNs:", error);
-    console.error("Error response data:", error.response?.data);
     throw error;
   }
 };
@@ -93,6 +93,39 @@ export const unloadPalletFromLocation = async (
     return response.data;
   } catch (error) {
     console.error("Error unloading pallet from location:", error);
+    throw error;
+  }
+};
+
+export const deleteAsnFromPallet = async (asnNumber, userId, distroId) => {
+  console.log("Deleting ASN from pallet:", asnNumber, userId, distroId);
+  try {
+    const response = await api.delete("/Pallets/delete-asn-from-pallet", {
+      data: {
+        Asn: asnNumber,
+        UserId: userId,
+        DistroId: distroId,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting ASN from pallet:", error);
+    throw error;
+  }
+};
+
+export const deletePallet = async (palletId, distroId, userId) => {
+  try {
+    const response = await api.delete("/Pallets/delete-pallet", {
+      data: {
+        PalletId: palletId,
+        DistroId: distroId,
+        UserId: userId,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error deleting pallet:", error);
     throw error;
   }
 };
