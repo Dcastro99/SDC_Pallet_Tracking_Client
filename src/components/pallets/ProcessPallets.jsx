@@ -195,7 +195,7 @@ export default function ProcessPallets() {
     console.log(`Fetching Pallet ID: ${id}`);
     setMessage("Loading pallet information...");
 
-    const distroId = "TDC";
+    const distroId = "SDC";
     const userId = "5555";
 
     try {
@@ -457,6 +457,10 @@ export default function ProcessPallets() {
     }
   }, [message]);
 
+  useEffect(() => {
+    console.log("Current Pallet updated:", currentPallet?.location);
+  }, [currentPallet]);
+
   return (
     <Box
       sx={{
@@ -609,7 +613,7 @@ export default function ProcessPallets() {
               ASN's on pallet:{" "}
               <strong>{currentPallet.asns?.length || 0}</strong>
             </Typography>
-            {currentPallet.current_location_id !== null && (
+            {currentPallet?.location !== null && (
               <Typography
                 sx={{ color: theme.palette.text.message }}
                 variant="body1"
