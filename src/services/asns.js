@@ -129,3 +129,14 @@ export const deletePallet = async (palletId, distroId, userId) => {
     throw error;
   }
 };
+
+export const validateASN = async (asnNumber) => {
+  try {
+    const asnInt = parseInt(asnNumber, 10);
+    const response = await api.get(`/Pallets/validate-asn/${asnInt}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error validating ASN:", error);
+    throw error;
+  }
+};
