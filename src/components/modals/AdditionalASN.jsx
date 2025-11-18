@@ -12,6 +12,7 @@ import {
   Stack,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { validateASN } from "../../services/asns";
 
 const AdditionalASN = ({
   isOpen,
@@ -29,6 +30,10 @@ const AdditionalASN = ({
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
   const inputRef = useRef(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [pendingAsnData, setPendingAsnData] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Clear additionalAsns array when palletId becomes null (Cancel is clicked)
   useEffect(() => {
@@ -54,16 +59,70 @@ const AdditionalASN = ({
     }
   }, [onClose]);
 
-  const handleAddAsn = () => {
-    if (scanInput.trim()) {
-      const newAsn = {
-        asn: scanInput.trim(),
-        sequence_order: additionalAsns.length + existingAsns.length + 1,
-        tempId: Date.now(), // Temporary ID for tracking
-      };
-      setAdditionalAsns([...additionalAsns, newAsn]);
-      setScanInput("");
+  // Auto-clear error messages after timeout
+  useEffect(() => {
+    if (errorMessage.startsWith("⚠️")) {
+      const timer = setTimeout(() => {
+        setErrorMessage("");
+      }, 4000);
+      return () => clearTimeout(timer);
     }
+  }, [errorMessage]);
+
+  const handleClose = () => {
+    setScanInput("");
+    setAdditionalAsns([]);
+    onClose();
+  };
+
+  const handleAddAsn = async () => {
+    if (scanInput.trim()) {
+      try {
+        const asnData = await validateASN(scanInput.trim());
+        if (asnData) {
+          console.log("Validated ASN data:", asnData);
+          const newAsn = {
+            asn: scanInput.trim(),
+            item_id: asnData.item_id,
+            po_no: asnData.po_no,
+            quantity: asnData.quantity,
+            sequence_order: additionalAsns.length + existingAsns.length + 1,
+            tempId: Date.now(),
+          };
+          // Store the pending ASN data and show confirmation dialog
+          setPendingAsnData(newAsn);
+          setConfirmDialogOpen(true);
+        }
+      } catch (error) {
+        console.error("Error validating ASN:", error);
+        const errorMsg =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          "Unknown error";
+        setErrorMessage(`⚠️ ${errorMsg}`);
+        setScanInput("");
+      }
+    }
+  };
+
+  const handleConfirmAdd = () => {
+    if (pendingAsnData) {
+      setAdditionalAsns([...additionalAsns, pendingAsnData]);
+      setScanInput("");
+      setPendingAsnData(null);
+      setConfirmDialogOpen(false);
+      // Refocus on input after adding
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  const handleCancelAdd = () => {
+    setScanInput("");
+    setPendingAsnData(null);
+    setConfirmDialogOpen(false);
+    // Refocus on input after canceling
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleDelete = (index) => {
@@ -350,9 +409,13 @@ const AdditionalASN = ({
 
         <Typography
           align="center"
-          sx={{ color: "#999", fontSize: "0.875rem", mb: 3 }}
+          sx={{
+            color: errorMessage.startsWith("⚠️") ? "#ff9800" : "#999",
+            fontSize: "0.875rem",
+            mb: 3,
+          }}
         >
-          Scan all ASN's on pallet
+          {errorMessage || "Scan all ASN's on pallet"}
         </Typography>
       </DialogContent>
 
@@ -382,7 +445,7 @@ const AdditionalASN = ({
         </Button>
         <Button
           size="small"
-          onClick={onClose}
+          onClick={handleClose}
           fullWidth
           sx={{
             color: "#999",
@@ -399,6 +462,120 @@ const AdditionalASN = ({
           Cancel
         </Button>
       </DialogActions>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCancelAdd}
+        // maxWidth="md"
+        fullWidth
+        maxWidth="xs"
+        slotProps={{
+          paper: {
+            sx: {
+              bgcolor: "#3a3a3a",
+              color: "white",
+              borderRadius: 2,
+            },
+          },
+        }}
+      >
+        <DialogContent sx={{ px: 1, py: 3, overflowY: "hidden" }}>
+          <Typography
+            variant="h6"
+            align="center"
+            sx={{ mb: 3, fontWeight: 500, color: "white" }}
+          >
+            Would you like to add ASN?
+          </Typography>
+
+          {pendingAsnData && (
+            <Box
+              sx={{
+                bgcolor: "#2a2a2a",
+                borderRadius: 1,
+                p: 2,
+                mb: 2,
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1}>
+                  <Typography sx={{ color: "#999", minWidth: 80 }}>
+                    ASN:
+                  </Typography>
+                  <Typography sx={{ color: "white", fontWeight: 500 }}>
+                    {pendingAsnData.asn}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <Typography sx={{ color: "#999", minWidth: 80 }}>
+                    Item ID:
+                  </Typography>
+                  <Typography sx={{ color: "white", fontWeight: 500 }}>
+                    {pendingAsnData.item_id}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <Typography sx={{ color: "#999", minWidth: 80 }}>
+                    PO No:
+                  </Typography>
+                  <Typography sx={{ color: "white", fontWeight: 500 }}>
+                    {pendingAsnData.po_no}
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1}>
+                  <Typography sx={{ color: "#999", minWidth: 80 }}>
+                    Quantity:
+                  </Typography>
+                  <Typography sx={{ color: "white", fontWeight: 500 }}>
+                    {pendingAsnData.quantity}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions
+          sx={{ flexDirection: "column", gap: 1.5, px: 3, pb: 3, pt: 0 }}
+        >
+          <Button
+            onClick={handleConfirmAdd}
+            fullWidth
+            variant="contained"
+            sx={{
+              bgcolor: "#6e49f5f1",
+              fontSize: "1rem",
+              textTransform: "none",
+              "&:hover": {
+                bgcolor: "#4b23dbf1",
+              },
+              "&:active": {
+                bgcolor: "#6e49f5f1",
+              },
+            }}
+          >
+            Yes
+          </Button>
+          <Button
+            onClick={handleCancelAdd}
+            fullWidth
+            sx={{
+              color: "#999",
+              textTransform: "none",
+              "&:hover": {
+                color: "#ccc",
+                bgcolor: "transparent",
+              },
+              "&:active": {
+                color: "white",
+              },
+            }}
+          >
+            No
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };
