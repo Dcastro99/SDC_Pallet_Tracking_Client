@@ -525,102 +525,139 @@ export default function ProcessPallets() {
         {currentPallet && (
           <Box
             sx={{
-              px: 1,
               width: "98%",
               maxHeight: 350,
               mb: 1,
               mt: 0.5,
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
               backgroundColor: theme.palette.background.default,
-
               borderRadius: 2,
               border: "2px solid #3dcf44ff",
-              overflowY: "auto",
-              //   maxWidth: "500px",
+              overflow: "hidden",
             }}
           >
-            {currentPallet.asns?.map((asn, index) => (
-              <Box
-                key={asn.asn}
-                sx={{
-                  width: "100%",
-                  mb: 1,
-                  pb: 1,
-                  borderBottom: "1px solid #444",
-                  "&:last-child": { borderBottom: "none" },
-                }}
-              >
+            {/* Scrollable ASN List */}
+            <Box
+              sx={{
+                px: 1,
+                overflowY: "auto",
+                flexGrow: 1,
+                minHeight: 0,
+              }}
+            >
+              {currentPallet.asns?.map((asn, index) => (
                 <Box
+                  key={asn.asn}
                   sx={{
-                    display: "flex",
-                    flexDirection: "row",
-                    // alignContent: "center",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    width: "100%",
+                    mb: 1,
+                    pb: 1,
+                    borderBottom: "1px solid #444",
+                    "&:last-child": { borderBottom: "none" },
                   }}
                 >
-                  <Box sx={{ width: 24 }} />
-                  <Typography
-                    variant="h6"
+                  <Box
                     sx={{
-                      color: theme.palette.text.message,
+                      display: "flex",
+                      flexDirection: "row",
+                      // alignContent: "center",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                     }}
                   >
-                    ASN: {asn.asn}
-                  </Typography>
-
-                  {index === 0 ? (
-                    <MoreVertIcon
-                      onClick={() => {
-                        setSelectedAsn(currentPallet);
-                        setDeleteAsnOpen(true);
-                      }}
+                    <Box sx={{ width: 24 }} />
+                    <Typography
+                      variant="h6"
                       sx={{
                         color: theme.palette.text.message,
-                        cursor: "pointer",
                       }}
-                    />
-                  ) : (
-                    <Box sx={{ width: 24 }} />
+                    >
+                      ASN: {asn.asn}
+                    </Typography>
+
+                    {index === 0 ? (
+                      <MoreVertIcon
+                        onClick={() => {
+                          setSelectedAsn(currentPallet);
+                          setDeleteAsnOpen(true);
+                        }}
+                        sx={{
+                          color: theme.palette.text.message,
+                          cursor: "pointer",
+                        }}
+                      />
+                    ) : (
+                      <Box sx={{ width: 24 }} />
+                    )}
+                  </Box>
+                  {currentPallet.asns.length > 1 ? null : (
+                    <Typography
+                      sx={{ color: theme.palette.text.message }}
+                      variant="body1"
+                    >
+                      PO: {asn.po_no}
+                    </Typography>
+                  )}
+                  <Typography
+                    sx={{ color: theme.palette.text.message }}
+                    variant="body1"
+                  >
+                    Item: {asn.item_id}
+                  </Typography>
+                  {currentPallet.asns.length > 1 ? null : (
+                    <Typography
+                      sx={{ color: theme.palette.text.message }}
+                      variant="body1"
+                    >
+                      Qty: {asn.quantity}
+                    </Typography>
                   )}
                 </Box>
-                <Typography
-                  sx={{ color: theme.palette.text.message }}
-                  variant="body1"
-                >
-                  PO: {asn.po_no}
-                </Typography>
-                <Typography
-                  sx={{ color: theme.palette.text.message }}
-                  variant="body1"
-                >
-                  Item: {asn.item_id}
-                </Typography>
-                <Typography
-                  sx={{ color: theme.palette.text.message }}
-                  variant="body1"
-                >
-                  Qty: {asn.quantity}
-                </Typography>
-              </Box>
-            ))}
-            <Typography
-              sx={{ color: theme.palette.text.message }}
-              variant="body1"
+              ))}
+            </Box>
+
+            {/* Fixed Footer */}
+            <Box
+              sx={{
+                px: 1,
+                pt: 1,
+                pb: 1,
+                borderTop: "1px solid #444",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                backgroundColor: theme.palette.background.default,
+                flexShrink: 0,
+              }}
             >
-              ASN's on pallet:{" "}
-              <strong>{currentPallet.asns?.length || 0}</strong>
-            </Typography>
-            {currentPallet?.location !== null && (
               <Typography
                 sx={{ color: theme.palette.text.message }}
                 variant="body1"
               >
-                Pallet location: <strong>{currentPallet.location}</strong>
+                ASN's on pallet:{" "}
+                <strong>{currentPallet.asns?.length || 0}</strong>
               </Typography>
-            )}
+              {currentPallet?.location !== null && (
+                <Typography
+                  sx={{ color: theme.palette.text.message }}
+                  variant="body1"
+                >
+                  {currentPallet.location.includes("BAY") ? (
+                    <>
+                      Pallet location:{" "}
+                      <strong>
+                        Truck {currentPallet.location.split("-")[1]}
+                      </strong>
+                    </>
+                  ) : (
+                    <>
+                      Pallet location: <strong>{currentPallet.location}</strong>
+                    </>
+                  )}
+                </Typography>
+              )}
+            </Box>
           </Box>
         )}
 
@@ -701,6 +738,7 @@ export default function ProcessPallets() {
           <Typography
             // variant="h6"
             sx={{
+              mt: 1,
               mb: 1,
               textAlign: "center",
               color: message.startsWith("✓")
